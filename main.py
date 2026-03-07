@@ -1,23 +1,26 @@
 import customtkinter as ctk
 import ctypes
-import sys
 from src.app_controller import AppController
+from src.app_config import APP_ID, UI_APPEARANCE_MODE, UI_COLOR_THEME
 from src.ui.app_window import AppWindow
 
-# Set AppUserModelID to ensure proper taskbar grouping
-try:
-    myappid = 'com.vkmusicsaver.app.1.0' # arbitrary string
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-except Exception:
-    pass
+def _set_windows_app_id():
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+    except Exception:
+        pass
 
-if __name__ == "__main__":
-    ctk.set_appearance_mode("Dark")
-    ctk.set_default_color_theme("blue")
+
+def main():
+    _set_windows_app_id()
+    ctk.set_appearance_mode(UI_APPEARANCE_MODE)
+    ctk.set_default_color_theme(UI_COLOR_THEME)
 
     controller = AppController()
 
     app = AppWindow(controller)
-
     app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()
+
+if __name__ == "__main__":
+    main()

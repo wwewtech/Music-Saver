@@ -18,7 +18,7 @@ from mutagen.id3 import (
     TLEN,
 )
 
-from src.config import VK_GENRES
+from src.app_config import VK_GENRES
 from src.domain.models import Track
 from src.utils.logger import logger
 

@@ -41,6 +41,9 @@ ENV/
 *.swo
 *~
 .gitconfig_global
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
 
 # OS
 Thumbs.db
@@ -54,6 +57,7 @@ selenium_cache/
 *.log
 *.db
 chrome_profile/
+*.zip
 
 # Binaries (large files, not for git)
 bin/

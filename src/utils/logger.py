@@ -1,6 +1,6 @@
 import logging
 import os
-from src.config import LOG_PATH
+from src.app_config import LOG_PATH
 
 
 def setup_logger():

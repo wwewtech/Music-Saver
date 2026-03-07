@@ -7,7 +7,7 @@ import time
 import uuid
 from typing import Optional
 
-from src.config import FFMPEG_PATH, BIN_DIR
+from src.app_config import FFMPEG_PATH, BIN_DIR
 from src.utils.logger import logger
 
 # Resolved once at import time; updated lazily on first call if needed.

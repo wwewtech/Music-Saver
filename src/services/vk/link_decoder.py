@@ -1,4 +1,4 @@
-from src.config import JS_UNKASK_URL
+from src.app_config import JS_UNKASK_URL
 from src.utils.logger import logger
 
 

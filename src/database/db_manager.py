@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from src.config import DB_PATH, DATA_DIR
+from src.app_config import DB_PATH, DATA_DIR
 
 
 class DBManager:

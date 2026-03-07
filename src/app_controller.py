@@ -24,7 +24,7 @@ from src.services.settings_manager import SettingsManager
 from src.services.telegram.telegram_service import TelegramService
 from src.domain.models import Playlist, Track
 from src.domain.tagger import Tagger, sanitize_filename
-from src.config import DOWNLOAD_DIR
+from src.app_config import APP_DIR, DOWNLOAD_DIR
 from src.utils.logger import logger
 
 
@@ -209,7 +209,9 @@ class AppController:
     def get_download_dir(self):
         configured_path = self.settings_manager.get("download_path", "")
         if configured_path:
-            return os.path.abspath(configured_path)
+            if os.path.isabs(configured_path):
+                return configured_path
+            return os.path.abspath(os.path.join(APP_DIR, configured_path))
         return DOWNLOAD_DIR
 
     @staticmethod

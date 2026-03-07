@@ -1,6 +1,6 @@
 import time
 from selenium.webdriver.common.by import By
-from src.config import (
+from src.app_config import (
     JS_PARSE_TRACKS,
     JS_EXPAND_BUTTON,
     JS_CLICK,

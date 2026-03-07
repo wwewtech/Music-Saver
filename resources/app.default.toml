@@ -1,98 +1,58 @@
-import os
-import sys
+[app]
+name = "VK Music Saver"
+version = "1.0.0"
+app_id = "com.vkmusicsaver.app"
 
-# Определяем корень проекта
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+[ui]
+appearance_mode = "Dark"
+color_theme = "blue"
 
+[storage]
+data_dir = "data"
+bin_dir = "bin"
+profile_dir = "chrome_profile"
+download_dir = "downloads"
+database_file = "vk_music.db"
+log_file = "app.log"
+settings_file = "settings.toml"
 
-if getattr(sys, "frozen", False):
-    APP_DIR = os.path.dirname(sys.executable)
-    if hasattr(sys, "_MEIPASS"):
-        RESOURCE_DIR = sys._MEIPASS
-    else:
-        # PyInstaller 6+ default onedir bundle is in _internal
-        internal_dir = os.path.join(APP_DIR, "_internal")
-        if os.path.exists(internal_dir):
-            RESOURCE_DIR = internal_dir
-        else:
-            RESOURCE_DIR = APP_DIR
-else:
-    APP_DIR = BASE_DIR
-    RESOURCE_DIR = BASE_DIR
+[settings.defaults]
+tg_bot_token = ""
+tg_chat_id = ""
+processing_strategy = "download_only"
+preferred_source = "vk"
+language = "ru"
+setup_completed = false
+download_path = ""
 
-# Папка для бинарников (автоскачивание при первом запуске)
-BIN_DIR = os.path.join(APP_DIR, "bin")
+[vk.genres]
+1 = "Rock"
+2 = "Pop"
+3 = "Rap & Hip-Hop"
+4 = "Easy Listening"
+5 = "Dance & House"
+6 = "Instrumental"
+7 = "Metal"
+8 = "Dubstep"
+1001 = "Jazz & Blues"
+10 = "Drum & Bass"
+11 = "Trance"
+12 = "Chanson"
+13 = "Ethnic"
+14 = "Acoustic & Vocal"
+15 = "Reggae"
+16 = "Classical"
+17 = "Indie Pop"
+18 = "Другое"
+19 = "Speech"
+21 = "Alternative"
+22 = "Electropop & Disco"
 
-# Папки данных
-DATA_DIR = os.path.join(APP_DIR, "data")
-PROFILE_DIR = os.path.join(DATA_DIR, "chrome_profile")
-DOWNLOAD_DIR = os.path.join(DATA_DIR, "downloads")
-
-# Файлы данных
-DB_PATH = os.path.join(DATA_DIR, "vk_music.db")
-LOG_PATH = os.path.join(DATA_DIR, "app.log")
-
-os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(PROFILE_DIR, exist_ok=True)
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-os.makedirs(BIN_DIR, exist_ok=True)
-
-# FFmpeg path: resolved lazily via BinaryManager.ensure_ffmpeg()
-# in ffmpeg_service.py.  This constant is a *default guess* for
-# backward compatibility with frozen (PyInstaller) builds that
-# ship the binary inside the bundle.
-FFMPEG_PATH: str = ""
-for _candidate in [
-    os.path.join(BIN_DIR, "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
-    os.path.join(RESOURCE_DIR, "bin", "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
-]:
-    if os.path.isfile(_candidate):
-        FFMPEG_PATH = _candidate
-        break
-
-# Security notice: the Chrome profile at PROFILE_DIR stores session cookies
-# for VK and Yandex.  Any local process on this machine has read access to them.
-# Consider using OS-level file permissions to restrict the data/ directory if needed.
-if sys.platform == "win32":
-    try:
-        import stat
-        _data_stat = os.stat(DATA_DIR)
-    except Exception:
-        pass
-
-# VK Genres Mapping
-VK_GENRES = {
-    1: "Rock",
-    2: "Pop",
-    3: "Rap & Hip-Hop",
-    4: "Easy Listening",
-    5: "Dance & House",
-    6: "Instrumental",
-    7: "Metal",
-    8: "Dubstep",
-    1001: "Jazz & Blues",
-    10: "Drum & Bass",
-    11: "Trance",
-    12: "Chanson",
-    13: "Ethnic",
-    14: "Acoustic & Vocal",
-    15: "Reggae",
-    16: "Classical",
-    17: "Indie Pop",
-    18: "Другое",
-    19: "Speech",
-    21: "Alternative",
-    22: "Electropop & Disco",
-}
-
-# JS Scripts
-JS_FIND_USER_ID = "return window.vk ? window.vk.id : null;"
-
-JS_SCROLL_HEIGHT = "return document.body.scrollHeight"
-
-JS_SCROLL_TO_BOTTOM = "window.scrollTo(0, document.body.scrollHeight);"
-
-JS_PARSE_TRACKS = """
+[js]
+find_user_id = "return window.vk ? window.vk.id : null;"
+scroll_height = "return document.body.scrollHeight"
+scroll_to_bottom = "window.scrollTo(0, document.body.scrollHeight);"
+parse_tracks = '''
 const getReactFiber = (el) => {
     const key = Object.keys(el).find(k => k.startsWith('__reactFiber') || k.startsWith('__reactProps'));
     return key ? el[key] : null;
@@ -123,7 +83,7 @@ rows.forEach((row, index) => {
     if (a) {
         row.setAttribute('data-vms-temp-id', index);
         const h = (hStr || a.hashes || "").split('/');
-        
+
         results.push({
             temp_id: index,
             id: a.owner_id + '_' + a.id,
@@ -137,7 +97,7 @@ rows.forEach((row, index) => {
             action_hash: a.actionHash || a.action_hash || h[2] || "",
             url_hash: a.urlHash || a.url_hash || h[5] || "",
             access_key: a.accessKey || a.access_key || h[0] || "",
-            
+
             album_obj: a.album || null,
             main_artists: a.main_artists || a.mainArtists || [],
             feat_artists: a.featured_artists || a.featArtists || [],
@@ -148,9 +108,8 @@ rows.forEach((row, index) => {
     }
 });
 return results;
-"""
-
-JS_UNKASK_URL = """
+'''
+unkask_url = '''
 const a = arguments[0];
 return new Promise((resolve) => {
     const vkId = window.vk ? window.vk.id : 0;
@@ -186,13 +145,12 @@ return new Promise((resolve) => {
                         else resolve(['FAIL', 'no_url_in_res']);
                     } catch(e) { resolve(['FAIL', 'parse_error']); }
                 },
-                onFail: (err) => resolve(['FAIL', 'ajax_fail_b'])
+                onFail: () => resolve(['FAIL', 'ajax_fail_b'])
             });
         },
-        onFail: (err) => resolve(['FAIL', 'ajax_fail_a'])
+        onFail: () => resolve(['FAIL', 'ajax_fail_a'])
     });
 });
-"""
-
-JS_EXPAND_BUTTON = "arguments[0].scrollIntoView({block: 'center'});"
-JS_CLICK = "arguments[0].click();"
+'''
+expand_button = "arguments[0].scrollIntoView({block: 'center'});"
+click = "arguments[0].click();"

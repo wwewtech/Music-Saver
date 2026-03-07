@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from src.config import PROFILE_DIR
+from src.app_config import PROFILE_DIR
 from src.utils.logger import logger
 
 

@@ -3,7 +3,7 @@ from tkinter import TclError
 from queue import Queue, Empty
 from concurrent.futures import ThreadPoolExecutor
 import os
-from src.config import RESOURCE_DIR
+from src.app_config import RESOURCE_DIR
 from src.ui.components.primitives import SectionHeader, StatusBadge, Surface
 from src.ui.views.dashboard_view import DashboardView
 from src.ui.views.downloader_view import DownloaderView
