@@ -285,7 +285,46 @@ class AppController:
                     self.on_log("Не удалось дождаться входа в Яндекс за отведенное время.")
                     return
 
+                # --- УМНЫЙ ПЕРЕХВАТ ТОКЕНА ДЛЯ СКАЧИВАНИЯ ---
+                self.on_log("Получение ключа доступа (токена) для Яндекс.Музыки...")
+                logger.info("Начинаем процесс получения OAuth токена...")
+                driver.get("https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d")
+                
+                ym_token = ""
+                # Ждем до 30 секунд, пока страница не редиректнет нас, отдав токен
+                for _ in range(30):
+                    current_url = driver.current_url
+                    if "access_token=" in current_url:
+                        ym_token = current_url.split("access_token=")[1].split("&")[0]
+                        break
+                        
+                    # Пытаемся автоматически нажать на кнопку "Войти как ..." если она есть
+                    try:
+                        from selenium.webdriver.common.by import By
+                        btns = driver.find_elements(By.CSS_SELECTOR, "button[type='submit']")
+                        for btn in btns:
+                            if btn.is_displayed():
+                                driver.execute_script("arguments[0].click();", btn)
+                                time.sleep(1)
+                                break
+                    except Exception:
+                        pass
+                        
+                    time.sleep(1)
+                
+                if ym_token:
+                    self.settings_manager.set("ym_token", ym_token)
+                    self.on_log("✅ Ключ доступа получен! Загрузка будет работать стабильно.")
+                    logger.info("Токен Яндекс Музыки успешно получен.")
+                else:
+                    self.on_log("⚠️ Не удалось получить ключ доступа автоматически.")
+                    logger.error("Таймаут получения токена Яндекс Музыки. Возможно, нужно было нажать 'Разрешить' в браузере.")
+                
                 self.on_log("Переходим в «Коллекция» → «Плейлисты» и сканируем список...")
+                driver.get("https://music.yandex.ru/collection/playlists")
+                time.sleep(2)
+                # ----------------------------------------------------
+
                 playlists_data = parser.parse_collection_playlists()
 
                 if not playlists_data:
@@ -497,26 +536,36 @@ class AppController:
                          self.on_log(f"Файл найден: {safe_title}")
                     else:
                         if track.source == "yandex":
-                            # ── Yandex Music simple download by URL (no token) ──
-                            if not track.url:
-                                logger.warning(
-                                    f"[YM_TRACK_FAIL] reason=missing_track_url track_id={track.id} title={safe_title}"
-                                )
-                                self.on_log(f"Yandex: у трека нет URL, пропуск: {safe_title}")
-                                file_exists = False
-                                continue
-
+                            # ── ИСПОЛЬЗУЕМ БЫСТРОЕ API ЯНДЕКСА ВМЕСТО БРАУЗЕРА ──
                             self.on_log(f"Yandex: скачивание: {safe_title}")
+                            logger.info(f"Yandex: начало скачивания через API: {safe_title}")
                             try:
-                                ok = YandexSimpleDownloadService.download_track(
-                                    track.url,
-                                    file_path,
-                                    browser_driver=ym_parser.driver,
-                                )
+                                from src.services.yandex.download_service import YandexDownloadService
+                                ym_token = self.settings_manager.get("ym_token", "")
+                                
+                                if not ym_token:
+                                    msg = "❌ Ошибка: Нет токена! Вернитесь в 'Настройки', нажмите 'Сканировать Яндекс плейлисты' и дождитесь зеленого сообщения о получении ключа."
+                                    self.on_log(msg)
+                                    logger.error(msg)
+                                    file_exists = False
+                                    continue
+
+                                ym_api = YandexDownloadService(ym_token)
+                                if not ym_api.is_available():
+                                    msg = "❌ Ошибка: библиотека yandex-music не инициализировалась (см. консоль)."
+                                    self.on_log(msg)
+                                    logger.error(msg)
+                                    file_exists = False
+                                    continue
+                                
+                                # Разбираем ID трека
+                                track_id, album_id = YandexDownloadService.extract_ids_from_track_id(track.id)
+                                
+                                # Качаем трек (библиотека сама вытянет прямую ссылку, обойдет DRM и загрузит MP3)
+                                ok = ym_api.download_track(track_id, album_id, file_path)
+                                
                                 if ok:
-                                    logger.info(
-                                        f"[YM_TRACK_OK] track_id={track.id} file={file_path} size={os.path.getsize(file_path)}"
-                                    )
+                                    logger.info(f"[YM_TRACK_OK] track_id={track.id} file={file_path}")
                                     self.on_log(f"Тегирование: {safe_title}")
                                     tag_ok = Tagger.apply_tags(
                                         file_path,
@@ -529,28 +578,16 @@ class AppController:
                                         self.track_repo.update_status(track.id, "downloaded", local_path=file_path)
                                         file_exists = True
                                     else:
-                                        logger.warning(
-                                            f"[YM_TRACK_FAIL] reason=tagger_failed track_id={track.id} file={file_path}"
-                                        )
-                                        self.on_log(f"Yandex: файл получен, но не является валидным MP3: {safe_title}")
-                                        try:
-                                            if os.path.exists(file_path):
-                                                os.remove(file_path)
-                                        except Exception:
-                                            pass
+                                        logger.warning("Ошибка тегирования Яндекса.")
                                         file_exists = False
                                 else:
-                                    logger.warning(
-                                        f"[YM_TRACK_FAIL] reason=downloader_returned_false track_id={track.id} "
-                                        f"track_url={track.url}"
-                                    )
-                                    self.on_log(f"Yandex: не удалось скачать: {safe_title}")
-                                    self.on_log("Подсказка: откройте music.yandex.ru в браузере приложения и войдите в аккаунт, затем повторите.")
+                                    msg = f"Yandex: API вернул False при скачивании: {safe_title}"
+                                    self.on_log(msg)
+                                    logger.error(msg)
                                     file_exists = False
+                                    
                             except Exception as de:
-                                logger.exception(
-                                    f"[YM_TRACK_FAIL] reason=exception track_id={track.id} error={de} track_url={track.url}"
-                                )
+                                logger.exception(f"[YM_TRACK_FAIL] Исключение: error={de}")
                                 self.on_log(f"Yandex ошибка: {de}")
                                 file_exists = False
                         else:
