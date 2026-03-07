@@ -7,8 +7,23 @@ import time
 import uuid
 from typing import Optional
 
-from src.config import FFMPEG_PATH
+from src.config import FFMPEG_PATH, BIN_DIR
 from src.utils.logger import logger
+
+# Resolved once at import time; updated lazily on first call if needed.
+_ffmpeg_path: str = FFMPEG_PATH
+
+
+def _get_ffmpeg() -> str:
+    """Return a valid path to the ffmpeg binary, downloading if necessary."""
+    global _ffmpeg_path
+    if _ffmpeg_path and os.path.isfile(_ffmpeg_path):
+        return _ffmpeg_path
+
+    from src.services.binary_manager import BinaryManager
+
+    _ffmpeg_path = BinaryManager(BIN_DIR).ensure_ffmpeg()
+    return _ffmpeg_path
 
 
 class DownloadError(Exception):
@@ -35,9 +50,10 @@ class FFmpegService:
         return tempfile.mkdtemp(prefix="ffmpeg_")
 
     @staticmethod
-    def download(url: str, filepath: str, headers: Optional[dict[str, str]] = None):
-        if not os.path.exists(FFMPEG_PATH):
-            raise DownloadError(f"FFmpeg binary not found: {FFMPEG_PATH}")
+    def download(
+        url: str, filepath: str, headers: Optional[dict[str, str]] = None, is_stopped: callable = None
+    ):
+        ffmpeg = _get_ffmpeg()
         if not url or not url.startswith("http"):
             raise DownloadError("Invalid URL for ffmpeg download")
 
@@ -51,12 +67,12 @@ class FFmpegService:
             logger.info(f"[FFMPEG_DL_SAFE_PATH] non-ASCII detected, temp={filepath}")
 
         logger.info(
-            f"[FFMPEG_DL_START] ffmpeg={FFMPEG_PATH} url={url[:120]} filepath={_final_filepath}"
+            f"[FFMPEG_DL_START] ffmpeg={ffmpeg} url={url[:120]} filepath={_final_filepath}"
         )
 
         try:
             cmd = [
-                FFMPEG_PATH,
+                ffmpeg,
                 "-y",
                 "-hide_banner",
                 "-loglevel",
@@ -92,18 +108,32 @@ class FFmpegService:
 
             started = time.time()
             try:
-                result = subprocess.run(
+                proc = subprocess.Popen(
                     cmd,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    check=True,
-                    timeout=300,
                 )
+                
+                while proc.poll() is None:
+                    if is_stopped and is_stopped():
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=2)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                        raise DownloadError("FFMPEG download cancelled by user")
+                    time.sleep(0.5)
+
+                if proc.returncode != 0:
+                    stderr = proc.stderr.read()
+                    raise subprocess.CalledProcessError(proc.returncode, cmd, stderr=stderr)
+                
                 if not os.path.exists(filepath):
                     raise DownloadError("File was not created by ffmpeg")
                 file_size = os.path.getsize(filepath)
                 logger.info(
-                    f"[FFMPEG_DL_END] returncode={result.returncode} file_size={file_size} "
+                    f"[FFMPEG_DL_END] returncode={proc.returncode} file_size={file_size} "
                     f"elapsed={round(time.time() - started, 2)}s"
                 )
             except subprocess.CalledProcessError as e:
@@ -133,8 +163,7 @@ class FFmpegService:
 
     @staticmethod
     def transcode_to_mp3(input_path: str, output_path: str):
-        if not os.path.exists(FFMPEG_PATH):
-            raise DownloadError(f"FFmpeg binary not found: {FFMPEG_PATH}")
+        ffmpeg = _get_ffmpeg()
         if not os.path.exists(input_path):
             raise DownloadError(f"Input file for transcode not found: {input_path}")
 
@@ -162,12 +191,12 @@ class FFmpegService:
                 logger.info(f"[FFMPEG_TRANSCODE_SAFE_PATH] output temp={output_path}")
 
         logger.info(
-            f"[FFMPEG_TRANSCODE_START] ffmpeg={FFMPEG_PATH} input={input_path} output={output_path}"
+            f"[FFMPEG_TRANSCODE_START] ffmpeg={ffmpeg} input={input_path} output={output_path}"
         )
 
         try:
             cmd = [
-                FFMPEG_PATH,
+                ffmpeg,
                 "-y",
                 "-hide_banner",
                 "-loglevel",

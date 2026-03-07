@@ -7,7 +7,6 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-bin/
 build/
 develop-eggs/
 dist/
@@ -24,11 +23,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-vk_music_saver.spec
 
 # PyInstaller
 *.manifest
-*.spec
 
 # Environments
 .env
@@ -37,6 +34,18 @@ env/
 venv/
 ENV/
 
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
 # Project specific
 data/
 chromedriver/
@@ -44,4 +53,7 @@ selenium_cache/
 *.log
 *.db
 chrome_profile/
+
+# Binaries (large files, not for git)
+bin/
 

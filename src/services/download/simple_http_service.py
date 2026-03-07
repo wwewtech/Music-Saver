@@ -28,12 +28,20 @@ class SimpleHTTPDownloadService:
             return "ogg"
         if head.startswith(b"RIFF"):
             return "wav_or_riff"
+        if head.startswith(b"#EXTM3U"):
+            return "hls_playlist"
         if b"showcaptcha" in lower:
             return "captcha_text"
         return "unknown_binary"
 
     @staticmethod
-    def download(url: str, filepath: str, timeout: int = 45, headers: dict = None):
+    def download(
+        url: str,
+        filepath: str,
+        timeout: int = 45,
+        headers: dict = None,
+        is_stopped: callable = None,
+    ):
         if not url or not url.startswith("http"):
             raise SimpleHTTPDownloadError("Invalid direct URL")
 
@@ -66,6 +74,13 @@ class SimpleHTTPDownloadService:
                     logger.info(f"[HTTP_DL_RESPONSE] redirects={redirects}")
                 response.raise_for_status()
 
+                if "mpegurl" in content_type or "m3u8" in final_url_lower:
+                    logger.warning(
+                        "[HTTP_DL_FAIL] reason=hls_playlist "
+                        f"content_type={content_type} final_url={final_url}"
+                    )
+                    raise SimpleHTTPDownloadError("URL is an HLS playlist, requires ffmpeg")
+
                 if "showcaptcha" in final_url_lower or "text/html" in content_type:
                     logger.warning(
                         "[HTTP_DL_FAIL] reason=html_or_captcha_response "
@@ -77,6 +92,8 @@ class SimpleHTTPDownloadService:
 
                 with open(filepath, "wb") as file_obj:
                     for chunk in response.iter_content(chunk_size=64 * 1024):
+                        if is_stopped and is_stopped():
+                            raise SimpleHTTPDownloadError("Download cancelled by user")
                         if chunk:
                             file_obj.write(chunk)
                             written_bytes += len(chunk)
@@ -125,6 +142,15 @@ class SimpleHTTPDownloadService:
                 logger.warning("[HTTP_DL_FAIL] reason=html_payload_detected_in_file")
                 raise SimpleHTTPDownloadError(
                     "Downloaded payload is HTML/CAPTCHA, not audio"
+                )
+            if payload_kind == "hls_playlist":
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+                logger.warning("[HTTP_DL_FAIL] reason=hls_playlist_detected_in_file")
+                raise SimpleHTTPDownloadError(
+                    "Downloaded payload is an HLS playlist (m3u8), requires ffmpeg"
                 )
         except SimpleHTTPDownloadError:
             raise

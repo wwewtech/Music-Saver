@@ -16,6 +16,10 @@ class VKDriverFactory:
     @staticmethod
     def create_driver():
         logger.info(f"Создание Selenium Driver. Путь к профилю: {PROFILE_DIR}")
+        logger.warning(
+            "SECURITY: Chrome profile хранит cookie-файлы сессий VK/Yandex. "
+            f"Путь: {PROFILE_DIR}. Ограничьте доступ к этой директории."
+        )
         
         # Настройка кастомного пути для кэша Selenium, чтобы избежать проблем с правами доступа в .cache
         selenium_cache_dir = os.path.join(os.path.dirname(PROFILE_DIR), "selenium_cache")
@@ -31,6 +35,10 @@ class VKDriverFactory:
         options.add_argument("--log-level=3")
         options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
+        # Reduce memory usage: limit renderer processes and disable unneeded features
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--renderer-process-limit=2")
 
         try:
             # Используем встроенный Selenium Manager (Selenium 4.10+)
@@ -42,9 +50,20 @@ class VKDriverFactory:
             raise e
 
         try:
-            driver.execute_cdp_cmd("Network.enable", {})
+            driver.execute_cdp_cmd("Network.enable", {
+                "maxTotalBufferSize": 10 * 1024 * 1024,   # 10 MB max instead of unlimited
+                "maxResourceBufferSize": 5 * 1024 * 1024,  # 5 MB per resource
+            })
             driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled": True})
         except Exception as e:
-            logger.warning(f"Не удалось отключить кэш через CDP: {e}")
+            logger.warning(f"Не удалось настроить Network через CDP: {e}")
 
         return driver
+
+    @staticmethod
+    def flush_performance_logs(driver):
+        """Drain Chrome performance logs to free memory. Call periodically."""
+        try:
+            driver.get_log("performance")
+        except Exception:
+            pass

@@ -7,13 +7,17 @@ project_root = Path(SPECPATH)
 
 customtkinter_datas = collect_data_files("customtkinter")
 
+# ffmpeg is auto-downloaded at runtime by BinaryManager.
+# If you want to bundle it anyway (for offline installs),
+# place ffmpeg.exe into bin/ before building.
 bin_datas = []
-for binary_name in ("chromedriver.exe", "ffmpeg.exe"):
-    binary_path = project_root / "bin" / binary_name
-    if binary_path.exists():
-        bin_datas.append((str(binary_path), "bin"))
+ffmpeg_path = project_root / "bin" / "ffmpeg.exe"
+if ffmpeg_path.exists():
+    bin_datas.append((str(ffmpeg_path), "bin"))
 
 datas = customtkinter_datas + bin_datas
+
+icon_path = project_root / "resources" / "VKMusicSaver.ico"
 
 
 a = Analysis(
@@ -32,18 +36,25 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
+exe_kwargs = {
+    "exclude_binaries": True,
+    "name": "VKMusicSaver",
+    "debug": False,
+    "bootloader_ignore_signals": False,
+    "strip": False,
+    "upx": True,
+    "console": False,
+    "disable_windowed_traceback": False,
+}
+
+if icon_path.exists():
+    exe_kwargs["icon"] = str(icon_path)
+
 exe = EXE(
     pyz,
     a.scripts,
     [],
-    exclude_binaries=True,
-    name="VKMusicSaver",
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
+    **exe_kwargs,
 )
 
 coll = COLLECT(

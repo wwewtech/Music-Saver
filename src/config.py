@@ -5,19 +5,6 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _resolve_binary(binary_name: str) -> str:
-    candidates = [
-        os.path.join(APP_DIR, "bin", binary_name),
-        os.path.join(RESOURCE_DIR, "bin", binary_name),
-        os.path.join(APP_DIR, binary_name),
-        os.path.join(RESOURCE_DIR, binary_name),
-    ]
-    for candidate in candidates:
-        if os.path.exists(candidate):
-            return candidate
-    return candidates[0]
-
-
 if getattr(sys, "frozen", False):
     APP_DIR = os.path.dirname(sys.executable)
     RESOURCE_DIR = getattr(sys, "_MEIPASS", APP_DIR)
@@ -25,12 +12,8 @@ else:
     APP_DIR = BASE_DIR
     RESOURCE_DIR = BASE_DIR
 
-# Папка для бинарников
+# Папка для бинарников (автоскачивание при первом запуске)
 BIN_DIR = os.path.join(APP_DIR, "bin")
-
-# Пути к файлам бинарников
-CHROMEDRIVER_PATH = _resolve_binary("chromedriver.exe")
-FFMPEG_PATH = _resolve_binary("ffmpeg.exe")
 
 # Папки данных
 DATA_DIR = os.path.join(APP_DIR, "data")
@@ -44,6 +27,30 @@ LOG_PATH = os.path.join(DATA_DIR, "app.log")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(PROFILE_DIR, exist_ok=True)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+os.makedirs(BIN_DIR, exist_ok=True)
+
+# FFmpeg path: resolved lazily via BinaryManager.ensure_ffmpeg()
+# in ffmpeg_service.py.  This constant is a *default guess* for
+# backward compatibility with frozen (PyInstaller) builds that
+# ship the binary inside the bundle.
+FFMPEG_PATH: str = ""
+for _candidate in [
+    os.path.join(BIN_DIR, "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
+    os.path.join(RESOURCE_DIR, "bin", "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
+]:
+    if os.path.isfile(_candidate):
+        FFMPEG_PATH = _candidate
+        break
+
+# Security notice: the Chrome profile at PROFILE_DIR stores session cookies
+# for VK and Yandex.  Any local process on this machine has read access to them.
+# Consider using OS-level file permissions to restrict the data/ directory if needed.
+if sys.platform == "win32":
+    try:
+        import stat
+        _data_stat = os.stat(DATA_DIR)
+    except Exception:
+        pass
 
 # VK Genres Mapping
 VK_GENRES = {

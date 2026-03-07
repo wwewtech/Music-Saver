@@ -1,7 +1,8 @@
 import os
 import threading
 import time
-from typing import List, Callable, Dict
+from concurrent.futures import ThreadPoolExecutor, Future
+from typing import List, Callable, Dict, Optional
 
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC
@@ -14,7 +15,6 @@ from src.services.vk.auth_service import AuthService
 from src.services.vk.parser_service import ParserService
 from src.services.vk.link_decoder import LinkDecoder
 from src.services.yandex.parser_service import YandexParserService
-from src.services.yandex.simple_download_service import YandexSimpleDownloadService
 from src.services.download.ffmpeg_service import FFmpegService, DownloadError
 from src.services.download.simple_http_service import (
     SimpleHTTPDownloadService,
@@ -48,7 +48,12 @@ class AppController:
         self._is_logging_in = False
 
         self.is_running = False
+        self._stop_event = threading.Event()
         self.user_id = None
+
+        # Thread pool for background tasks (max 1 worker — sequential execution)
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vkms")
+        self._current_future: Optional[Future] = None
 
         # Callbacks for UI updates
         self.on_log = lambda msg: print(msg)
@@ -56,6 +61,26 @@ class AppController:
         self.on_scan_complete = lambda playlists: None
         self.on_download_complete = lambda: None
         self.on_login_success = lambda: None
+
+    # ── Task management ──────────────────────────────────────────────────
+
+    def _submit_task(self, fn):
+        """Submit a callable to the thread pool. Cancels are cooperative via _stop_event."""
+        self._current_future = self._executor.submit(fn)
+
+    def _is_stopped(self) -> bool:
+        """Check if a stop has been requested. Use inside long-running tasks."""
+        return self._stop_event.is_set()
+
+    def _interruptible_sleep(self, seconds: float):
+        """Sleep that responds to stop requests. Returns True if interrupted."""
+        return self._stop_event.wait(timeout=seconds)
+
+    def stop_current_task(self):
+        """Signal the current background task to stop gracefully."""
+        logger.info("Запрошена остановка текущей задачи.")
+        self._stop_event.set()
+        self.is_running = False
 
     # ── Driver management ────────────────────────────────────────────────
 
@@ -242,7 +267,7 @@ class AppController:
                 with self._login_lock:
                     self._is_logging_in = False
 
-        threading.Thread(target=_task, daemon=True).start()
+        self._submit_task(_task)
 
     def scan_playlists(self):
         def _task():
@@ -276,7 +301,7 @@ class AppController:
                 logger.exception("Ошибка при сканировании плейлистов")
                 self.on_log(f"Ошибка сканирования: {e}")
 
-        threading.Thread(target=_task, daemon=True).start()
+        self._submit_task(_task)
 
     def scan_yandex_chart(self):
         def _task():
@@ -313,6 +338,8 @@ class AppController:
                 ym_token = ""
                 # Ждем до 30 секунд, пока страница не редиректнет нас, отдав токен
                 for _ in range(30):
+                    if self._is_stopped():
+                        return
                     current_url = driver.current_url
                     if "access_token=" in current_url:
                         ym_token = current_url.split("access_token=")[1].split("&")[0]
@@ -328,12 +355,12 @@ class AppController:
                         for btn in btns:
                             if btn.is_displayed():
                                 driver.execute_script("arguments[0].click();", btn)
-                                time.sleep(1)
+                                self._interruptible_sleep(1)
                                 break
                     except Exception:
                         pass
 
-                    time.sleep(1)
+                    self._interruptible_sleep(1)
 
                 if ym_token:
                     self.settings_manager.set("ym_token", ym_token)
@@ -351,7 +378,7 @@ class AppController:
                     "Переходим в «Коллекция» → «Плейлисты» и сканируем список..."
                 )
                 driver.get("https://music.yandex.ru/collection/playlists")
-                time.sleep(2)
+                self._interruptible_sleep(2)
                 # ----------------------------------------------------
 
                 playlists_data = parser.parse_collection_playlists()
@@ -379,7 +406,7 @@ class AppController:
                 logger.exception("Ошибка сканирования Яндекс-плейлистов")
                 self.on_log(f"Ошибка сканирования Yandex Music: {e}")
 
-        threading.Thread(target=_task, daemon=True).start()
+        self._submit_task(_task)
 
     def scan_yandex_playlist(self, url: str):
         """Scan a Yandex Music playlist by URL using Selenium."""
@@ -413,7 +440,7 @@ class AppController:
                 logger.exception("Ошибка сканирования YM плейлиста")
                 self.on_log(f"Ошибка сканирования Yandex Music: {e}")
 
-        threading.Thread(target=_task, daemon=True).start()
+        self._submit_task(_task)
 
     @staticmethod
     def _is_yandex_playlist(playlist: Playlist) -> bool:
@@ -430,6 +457,7 @@ class AppController:
             return
 
         self.is_running = True
+        self._stop_event.clear()
         strategy = settings.get("strategy", self.get_processing_strategy())
         download_root = self.get_download_dir()
 
@@ -477,7 +505,7 @@ class AppController:
             self.on_log(f"Запуск процесса. Стратегия: {strategy}")
 
             for pl in selected_playlists:
-                if not self.is_running:
+                if self._is_stopped():
                     break
 
                 logger.info(f"--- Обработка плейлиста: {pl.title} ---")
@@ -515,8 +543,12 @@ class AppController:
                         topic_id = self.telegram_service.create_topic(pl.title)
 
                 for i, t_data in enumerate(track_dicts):
-                    if not self.is_running:
+                    if self._is_stopped():
                         break
+
+                    # Periodically flush Selenium performance logs to prevent OOM
+                    if i % 20 == 0 and self.driver:
+                        VKDriverFactory.flush_performance_logs(self.driver)
 
                     progress_val = (i + 1) / total
                     self.on_progress(progress_val)
@@ -690,7 +722,7 @@ class AppController:
                                         f"Пробуем простой HTTP download для {file_path}"
                                     )
                                     SimpleHTTPDownloadService.download(
-                                        direct_url, file_path
+                                        direct_url, file_path, is_stopped=self._is_stopped
                                     )
                                     logger.info(
                                         f"Успешно скачано простым HTTP методом: {safe_title}"
@@ -703,7 +735,9 @@ class AppController:
                                         f"VK: прямое скачивание не удалось, пробуем ffmpeg: {safe_title}"
                                     )
                                     try:
-                                        FFmpegService.download(direct_url, file_path)
+                                        FFmpegService.download(
+                                            direct_url, file_path, is_stopped=self._is_stopped
+                                        )
                                     except DownloadError as ff_err:
                                         logger.exception(
                                             f"[VK_TRACK_FFMPEG_FAIL] track_id={track.id} reason={ff_err}"
@@ -854,11 +888,13 @@ class AppController:
             logger.info("Весь процесс завершен (is_running=False)")
             self.on_log("Очередь завершена.")
 
-        threading.Thread(target=_task, daemon=True).start()
+        self._submit_task(_task)
 
     def close_app(self):
         logger.info("Закрытие приложения...")
-        self.is_running = False
+        self.stop_current_task()
+        # Shut down thread pool (wait up to 5s for running tasks)
+        self._executor.shutdown(wait=False)
         if self.driver:
             logger.info("Закрытие Selenium Driver...")
             try:
