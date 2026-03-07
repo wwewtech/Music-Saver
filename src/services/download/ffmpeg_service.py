@@ -64,7 +64,9 @@ class FFmpegService:
             ]
 
             if headers:
-                header_lines = [f"{key}: {value}" for key, value in headers.items() if value]
+                header_lines = [
+                    f"{key}: {value}" for key, value in headers.items() if value
+                ]
                 if header_lines:
                     headers_blob = "\r\n".join(header_lines) + "\r\n"
                     cmd += ["-headers", headers_blob]
@@ -193,7 +195,9 @@ class FFmpegService:
                     timeout=300,
                 )
                 if not os.path.exists(output_path):
-                    raise DownloadError("Output file was not created by ffmpeg transcode")
+                    raise DownloadError(
+                        "Output file was not created by ffmpeg transcode"
+                    )
                 file_size = os.path.getsize(output_path)
                 logger.info(
                     f"[FFMPEG_TRANSCODE_END] returncode={result.returncode} file_size={file_size} "
@@ -210,14 +214,22 @@ class FFmpegService:
                     f"stderr={stderr_text[:300]}"
                 )
             except subprocess.TimeoutExpired as e:
-                logger.warning(f"[FFMPEG_TRANSCODE_FAIL] reason=timeout seconds={e.timeout}")
-                raise DownloadError(f"FFmpeg transcode timeout after {e.timeout} seconds")
+                logger.warning(
+                    f"[FFMPEG_TRANSCODE_FAIL] reason=timeout seconds={e.timeout}"
+                )
+                raise DownloadError(
+                    f"FFmpeg transcode timeout after {e.timeout} seconds"
+                )
             except Exception as e:
                 logger.exception(f"[FFMPEG_TRANSCODE_FAIL] reason=unexpected error={e}")
                 raise DownloadError(f"Unexpected transcode error: {e}")
 
             # Move from temp to final destination
-            if _temp_dir and output_path != _final_output and os.path.exists(output_path):
+            if (
+                _temp_dir
+                and output_path != _final_output
+                and os.path.exists(output_path)
+            ):
                 os.makedirs(os.path.dirname(_final_output), exist_ok=True)
                 shutil.move(output_path, _final_output)
                 logger.debug(f"[FFMPEG_TRANSCODE_SAFE_PATH] moved to {_final_output}")

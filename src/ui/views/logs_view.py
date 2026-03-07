@@ -42,7 +42,7 @@ class LogsView(ctk.CTkFrame):
             **button_style(self.theme, "secondary"),
         )
         self.btn_clear.pack(side="right")
-        
+
         self.textbox = ctk.CTkTextbox(
             self,
             fg_color=self.theme["panel"],

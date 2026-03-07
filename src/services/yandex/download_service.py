@@ -75,7 +75,9 @@ class YandexDownloadService:
             track.download(filepath, codec=codec, bitrate_in_kbps=bitrate)
 
             if os.path.exists(filepath) and os.path.getsize(filepath) > 1024:
-                logger.info(f"YandexDownload: success ({os.path.getsize(filepath)} bytes)")
+                logger.info(
+                    f"YandexDownload: success ({os.path.getsize(filepath)} bytes)"
+                )
                 return True
 
             logger.warning("YandexDownload: downloaded file is missing or too small")

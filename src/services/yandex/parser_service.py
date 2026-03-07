@@ -148,7 +148,9 @@ class YandexParserService:
         time.sleep(4)
 
         # Playlist title
-        title = self.driver.execute_script(JS_YM_PLAYLIST_TITLE) or "Yandex Music Playlist"
+        title = (
+            self.driver.execute_script(JS_YM_PLAYLIST_TITLE) or "Yandex Music Playlist"
+        )
 
         # Scroll to lazy-load all tracks (handles playlists > 100 tracks)
         self._scroll_to_load_all()
@@ -163,7 +165,9 @@ class YandexParserService:
         logger.info(f"YandexParser: parsed {len(tracks)} tracks from '{title}'")
         return title, tracks
 
-    def prepare_collection_for_manual_login(self, login_timeout_seconds: int = 180) -> bool:
+    def prepare_collection_for_manual_login(
+        self, login_timeout_seconds: int = 180
+    ) -> bool:
         """Open Yandex Music, wait until user logs in, then open Collection page."""
         if not self.driver:
             raise RuntimeError("Selenium driver is required for Yandex login flow")
@@ -224,7 +228,9 @@ class YandexParserService:
         }
 
         logger.info("YandexParserService: requesting chart data")
-        response = requests.get(self.CHART_URL, params=params, headers=headers, timeout=20)
+        response = requests.get(
+            self.CHART_URL, params=params, headers=headers, timeout=20
+        )
         response.raise_for_status()
         data = response.json()
 
@@ -239,9 +245,13 @@ class YandexParserService:
             albums = track.get("albums") or []
             album_id = str(albums[0].get("id")) if albums else ""
             artists = track.get("artists") or []
-            artist_names = ", ".join(a.get("name", "") for a in artists if a.get("name"))
+            artist_names = ", ".join(
+                a.get("name", "") for a in artists if a.get("name")
+            )
             cover_uri = track.get("coverUri", "")
-            cover_url = f"https://{cover_uri.replace('%%', '400x400')}" if cover_uri else ""
+            cover_url = (
+                f"https://{cover_uri.replace('%%', '400x400')}" if cover_uri else ""
+            )
 
             tracks.append(
                 {
@@ -254,7 +264,11 @@ class YandexParserService:
                     "subtitle": track.get("version") or "",
                     "duration": int(track.get("durationMs", 0) / 1000),
                     "cover_url": cover_url,
-                    "url": f"https://music.yandex.ru/album/{album_id}/track/{track_id}" if album_id else "",
+                    "url": (
+                        f"https://music.yandex.ru/album/{album_id}/track/{track_id}"
+                        if album_id
+                        else ""
+                    ),
                     "source": "yandex",
                 }
             )
@@ -284,7 +298,9 @@ class YandexParserService:
         """Wait until the left navigation appears (signal that user is logged in)."""
         try:
             WebDriverWait(self.driver, timeout_seconds).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "aside[class*='Navbar_root']"))
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "aside[class*='Navbar_root']")
+                )
             )
             logger.info("YandexParser: login signal detected (Navbar)")
             return True
@@ -313,12 +329,19 @@ class YandexParserService:
         self.driver.get("https://music.yandex.ru/collection/playlists")
         try:
             WebDriverWait(self.driver, 30).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-intersection-property-id='COLLECTION_PLAYLISTS'], a[href*='/playlists/']"))
+                EC.presence_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        "section[data-intersection-property-id='COLLECTION_PLAYLISTS'], a[href*='/playlists/']",
+                    )
+                )
             )
             logger.info("YandexParser: opened /collection/playlists")
             return
         except TimeoutException:
-            logger.warning("YandexParser: /collection/playlists did not load in time, trying fallback")
+            logger.warning(
+                "YandexParser: /collection/playlists did not load in time, trying fallback"
+            )
 
         self.driver.get("https://music.yandex.ru/collection")
         WebDriverWait(self.driver, 30).until(
@@ -327,15 +350,29 @@ class YandexParserService:
 
         try:
             playlists_link = WebDriverWait(self.driver, 20).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "a[href='/collection/playlists'], a[href*='/collection/playlists']"))
+                EC.element_to_be_clickable(
+                    (
+                        By.CSS_SELECTOR,
+                        "a[href='/collection/playlists'], a[href*='/collection/playlists']",
+                    )
+                )
             )
             self.driver.execute_script("arguments[0].click();", playlists_link)
             WebDriverWait(self.driver, 30).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-intersection-property-id='COLLECTION_PLAYLISTS'], a[href*='/playlists/']"))
+                EC.presence_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        "section[data-intersection-property-id='COLLECTION_PLAYLISTS'], a[href*='/playlists/']",
+                    )
+                )
             )
-            logger.info("YandexParser: playlists section opened via Collection page link")
+            logger.info(
+                "YandexParser: playlists section opened via Collection page link"
+            )
         except TimeoutException:
-            logger.warning("YandexParser: playlists section not found after fallback navigation")
+            logger.warning(
+                "YandexParser: playlists section not found after fallback navigation"
+            )
 
     @staticmethod
     def _normalize_tracks(raw_tracks: List[Dict]) -> List[Dict]:

@@ -38,22 +38,24 @@ class SideBar(ctk.CTkFrame):
         ctk.CTkLabel(self, text="Telegram (Status):", anchor="w").pack(
             pady=(20, 5), padx=20, fill="x"
         )
-        
+
         self.entry_bot_token = ctk.CTkEntry(self, placeholder_text="Bot Token")
         self.entry_bot_token.pack(padx=20, pady=5)
-        
+
         self.entry_chat_id = ctk.CTkEntry(self, placeholder_text="Chat ID")
         self.entry_chat_id.pack(padx=20, pady=5)
-        
-        self.btn_save_tg = ctk.CTkButton(self, text="Тест / Сохранить", command=self._handle_save_tg, height=30)
+
+        self.btn_save_tg = ctk.CTkButton(
+            self, text="Тест / Сохранить", command=self._handle_save_tg, height=30
+        )
         self.btn_save_tg.pack(padx=20, pady=10)
-        
+
         self.on_save_callback = None
 
     def set_tg_settings(self, token, chat_id):
-        self.entry_bot_token.delete(0, 'end')
+        self.entry_bot_token.delete(0, "end")
         self.entry_bot_token.insert(0, token or "")
-        self.entry_chat_id.delete(0, 'end')
+        self.entry_chat_id.delete(0, "end")
         self.entry_chat_id.insert(0, chat_id or "")
 
     def _handle_save_tg(self):

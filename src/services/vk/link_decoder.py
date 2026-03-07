@@ -19,13 +19,23 @@ class LinkDecoder:
         )
 
         if not self.driver:
-            logger.warning(f"[VK_LINK_DECODE_FAIL] reason=no_driver track_id={track_id}")
+            logger.warning(
+                f"[VK_LINK_DECODE_FAIL] reason=no_driver track_id={track_id}"
+            )
             return None
 
         try:
             result = self.driver.execute_script(JS_UNKASK_URL, track_dict)
-            plan = result[0] if isinstance(result, (list, tuple)) and len(result) > 0 else None
-            payload = result[1] if isinstance(result, (list, tuple)) and len(result) > 1 else None
+            plan = (
+                result[0]
+                if isinstance(result, (list, tuple)) and len(result) > 0
+                else None
+            )
+            payload = (
+                result[1]
+                if isinstance(result, (list, tuple)) and len(result) > 1
+                else None
+            )
 
             if payload and isinstance(payload, str) and payload.startswith("http"):
                 logger.info(
@@ -38,5 +48,7 @@ class LinkDecoder:
             )
             return None
         except Exception as e:
-            logger.exception(f"[VK_LINK_DECODE_FAIL] reason=exception track_id={track_id} error={e}")
+            logger.exception(
+                f"[VK_LINK_DECODE_FAIL] reason=exception track_id={track_id} error={e}"
+            )
             return None

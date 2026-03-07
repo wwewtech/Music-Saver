@@ -15,7 +15,11 @@ class AppWindow(ctk.CTk):
         self.controller = controller
         self.theme = get_theme()
 
-        lang = self.controller.get_language() if hasattr(self.controller, "get_language") else "ru"
+        lang = (
+            self.controller.get_language()
+            if hasattr(self.controller, "get_language")
+            else "ru"
+        )
         self.i18n = I18n(lang)
         self.i18n.subscribe(self.apply_language)
         self._ui_events = Queue()
@@ -28,29 +32,37 @@ class AppWindow(ctk.CTk):
             "tg": ("telegram.title", "telegram.subtitle"),
             "logs": ("logs.title", "logs.subtitle"),
         }
-        
+
         self.title(self.i18n.t("app.title"))
         self.geometry("1240x820")
         self.minsize(1120, 760)
         self.configure(fg_color=self.theme["bg"])
-        
+
         # Configure Controller Callbacks
         self.controller.on_log = lambda msg: self._ui_events.put(("log", msg))
-        self.controller.on_scan_complete = lambda playlists: self._ui_events.put(("scan_complete", playlists))
+        self.controller.on_scan_complete = lambda playlists: self._ui_events.put(
+            ("scan_complete", playlists)
+        )
         self.controller.on_progress = lambda val: self._ui_events.put(("progress", val))
-        self.controller.on_download_complete = lambda: self._ui_events.put(("download_complete", None))
-        self.controller.on_login_success = lambda: self._ui_events.put(("login_success", None))
-        self.controller.on_preferred_source_changed = lambda source: self._ui_events.put(("preferred_source_changed", source))
-        
+        self.controller.on_download_complete = lambda: self._ui_events.put(
+            ("download_complete", None)
+        )
+        self.controller.on_login_success = lambda: self._ui_events.put(
+            ("login_success", None)
+        )
+        self.controller.on_preferred_source_changed = (
+            lambda source: self._ui_events.put(("preferred_source_changed", source))
+        )
+
         # Hook for strategy
         self.controller.get_current_strategy = self.get_strategy_from_ui
-        
+
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        
+
         self.setup_sidebar()
         self.setup_views()
-        
+
         # Start Clock/Stats Loop
         self.update_stats_loop()
         self.process_ui_events()
@@ -103,7 +115,7 @@ class AppWindow(ctk.CTk):
 
         brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         brand_frame.pack(fill="x", padx=18, pady=(28, 10))
-        
+
         self.lbl_logo = ctk.CTkLabel(
             brand_frame,
             text=self.i18n.t("app.logo"),
@@ -140,7 +152,9 @@ class AppWindow(ctk.CTk):
         )
         self.lbl_lang.pack(fill="x", padx=12, pady=(12, 2))
 
-        self.lang_switch = ctk.CTkFrame(nav_block, fg_color=self.theme["surface"], corner_radius=10)
+        self.lang_switch = ctk.CTkFrame(
+            nav_block, fg_color=self.theme["surface"], corner_radius=10
+        )
         self.lang_switch.pack(fill="x", padx=12, pady=(4, 12))
 
         self.btn_lang_ru = ctk.CTkButton(
@@ -163,12 +177,16 @@ class AppWindow(ctk.CTk):
         )
         self.btn_lang_en.pack(side="left", fill="x", expand=True, padx=(2, 4), pady=4)
         self._set_language_buttons("ru" if self.i18n.language == "ru" else "en")
-        
-        self.btn_dash = self.create_nav_btn(nav_block, self.i18n.t("nav.dashboard"), "dashboard")
-        self.btn_vk = self.create_nav_btn(nav_block, self.i18n.t("nav.downloader"), "vk")
+
+        self.btn_dash = self.create_nav_btn(
+            nav_block, self.i18n.t("nav.dashboard"), "dashboard"
+        )
+        self.btn_vk = self.create_nav_btn(
+            nav_block, self.i18n.t("nav.downloader"), "vk"
+        )
         self.btn_tg = self.create_nav_btn(nav_block, self.i18n.t("nav.telegram"), "tg")
         self.btn_logs = self.create_nav_btn(nav_block, self.i18n.t("nav.logs"), "logs")
-        
+
         # Small footer
         self.lbl_ver = ctk.CTkLabel(
             self.sidebar,
@@ -245,13 +263,19 @@ class AppWindow(ctk.CTk):
         self.view_container.grid(row=1, column=0, sticky="nsew")
         self.view_container.grid_rowconfigure(0, weight=1)
         self.view_container.grid_columnconfigure(0, weight=1)
-        
+
         self.views = {}
-        self.views["dashboard"] = DashboardView(self.view_container, self.controller, self.i18n, self.theme)
-        self.views["vk"] = DownloaderView(self.view_container, self.controller, self.i18n, self.theme)
-        self.views["tg"] = TelegramView(self.view_container, self.controller, self.i18n, self.theme)
+        self.views["dashboard"] = DashboardView(
+            self.view_container, self.controller, self.i18n, self.theme
+        )
+        self.views["vk"] = DownloaderView(
+            self.view_container, self.controller, self.i18n, self.theme
+        )
+        self.views["tg"] = TelegramView(
+            self.view_container, self.controller, self.i18n, self.theme
+        )
         self.views["logs"] = LogsView(self.view_container, self.i18n, self.theme)
-        
+
         # Init default
         self.show_view("dashboard")
 
@@ -260,22 +284,24 @@ class AppWindow(ctk.CTk):
         # Hide all
         for v in self.views.values():
             v.grid_forget()
-        
+
         # Reset butons
         for btn in [self.btn_dash, self.btn_vk, self.btn_tg, self.btn_logs]:
             btn.configure(**button_style(self.theme, "nav"))
-            
+
         # Highlight active
         btn_map = {
             "dashboard": self.btn_dash,
             "vk": self.btn_vk,
             "tg": self.btn_tg,
-            "logs": self.btn_logs
+            "logs": self.btn_logs,
         }
         if name in btn_map:
             btn_map[name].configure(**button_style(self.theme, "nav_active"))
 
-        title_key, subtitle_key = self.view_titles.get(name, ("dashboard.title", "dashboard.subtitle"))
+        title_key, subtitle_key = self.view_titles.get(
+            name, ("dashboard.title", "dashboard.subtitle")
+        )
         self.lbl_section.configure(text=self.i18n.t(title_key))
         self.lbl_section_sub.configure(text=self.i18n.t(subtitle_key))
 
@@ -287,27 +313,31 @@ class AppWindow(ctk.CTk):
 
     def log_message(self, msg):
         self.views["logs"].append(msg)
-    
+
     def on_scan_complete(self, playlists):
         self.views["vk"].update_playlists(playlists)
-        if "tg" in self.views and hasattr(self.views["tg"], "set_yandex_collection_status"):
-            has_yandex = any(str(getattr(pl, "id", "")).startswith("ym:") for pl in playlists or [])
+        if "tg" in self.views and hasattr(
+            self.views["tg"], "set_yandex_collection_status"
+        ):
+            has_yandex = any(
+                str(getattr(pl, "id", "")).startswith("ym:") for pl in playlists or []
+            )
             self.views["tg"].set_yandex_collection_status(has_yandex)
         self.on_log_message(self.i18n.t("app.playlists.received"))
         self._schedule_after(100, lambda: self.show_view("vk"))
 
     def on_progress(self, val):
-        pass # Optional: Add progress bar to sidebar if requested.
+        pass  # Optional: Add progress bar to sidebar if requested.
 
     def on_download_complete(self):
         self.log_message(self.i18n.t("app.download.complete"))
-        
+
     def on_login_success(self):
         self.log_message(self.i18n.t("app.login.success"))
         self.views["vk"].set_connected_status(True)
         if "tg" in self.views and hasattr(self.views["tg"], "set_vk_connected_status"):
             self.views["tg"].set_vk_connected_status(True)
-    
+
     def on_log_message(self, msg):
         # Compatibility wrapper
         self.log_message(msg)
@@ -337,7 +367,9 @@ class AppWindow(ctk.CTk):
         self.btn_tg.configure(text=self.i18n.t("nav.telegram"))
         self.btn_logs.configure(text=self.i18n.t("nav.logs"))
 
-        title_key, subtitle_key = self.view_titles.get(self.current_view, ("dashboard.title", "dashboard.subtitle"))
+        title_key, subtitle_key = self.view_titles.get(
+            self.current_view, ("dashboard.title", "dashboard.subtitle")
+        )
         self.lbl_section.configure(text=self.i18n.t(title_key))
         self.lbl_section_sub.configure(text=self.i18n.t(subtitle_key))
 

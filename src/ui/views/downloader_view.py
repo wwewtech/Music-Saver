@@ -54,7 +54,10 @@ class DownloaderView(ctk.CTkFrame):
 
         self.source_selector = ctk.CTkSegmentedButton(
             source_frame,
-            values=[self.i18n.t("downloader.source.vk"), self.i18n.t("downloader.source.yandex")],
+            values=[
+                self.i18n.t("downloader.source.vk"),
+                self.i18n.t("downloader.source.yandex"),
+            ],
             command=self._on_source_changed,
             height=32,
             font=ui_font(self.theme, 12, "bold"),
@@ -91,7 +94,7 @@ class DownloaderView(ctk.CTkFrame):
             **button_style(self.theme, "secondary"),
         )
         self.btn_scan_yandex.pack(side="left", padx=8, pady=12)
-        
+
         self.lbl_status = ctk.CTkLabel(
             ctrl_frame,
             text=self.i18n.t("downloader.status.idle"),
@@ -117,10 +120,10 @@ class DownloaderView(ctk.CTkFrame):
             anchor="w",
         )
         self.lbl_options.pack(fill="x", padx=12, pady=(10, 0))
-        
+
         self.var_covers = ctk.BooleanVar(value=True)
         self.var_id3 = ctk.BooleanVar(value=True)
-        
+
         self.chk_covers = ctk.CTkCheckBox(
             opts_frame,
             text=self.i18n.t("downloader.covers"),
@@ -216,28 +219,34 @@ class DownloaderView(ctk.CTkFrame):
 
     def update_playlists(self, playlists):
         self.all_playlists = playlists or []
-        visible_playlists = [pl for pl in self.all_playlists if self._matches_source(pl)]
+        visible_playlists = [
+            pl for pl in self.all_playlists if self._matches_source(pl)
+        ]
 
         # Clear old
         for item in self.checkboxes:
             item[2].destroy()
         self.checkboxes = []
-        
+
         # Remove empty state elements if they exist
-        if hasattr(self, 'lbl_empty'):
+        if hasattr(self, "lbl_empty"):
             self.lbl_empty.destroy()
             del self.lbl_empty
-        if hasattr(self, 'btn_empty_scan'): 
+        if hasattr(self, "btn_empty_scan"):
             self.btn_empty_scan.destroy()
             del self.btn_empty_scan
-        if hasattr(self, 'btn_empty_scan_ym'):
+        if hasattr(self, "btn_empty_scan_ym"):
             self.btn_empty_scan_ym.destroy()
             del self.btn_empty_scan_ym
-            
+
         if not visible_playlists:
             self.lbl_empty = ctk.CTkLabel(
                 self.scroll,
-                text=self.i18n.t("downloader.empty.vk") if self.current_source == "vk" else self.i18n.t("downloader.empty"),
+                text=(
+                    self.i18n.t("downloader.empty.vk")
+                    if self.current_source == "vk"
+                    else self.i18n.t("downloader.empty")
+                ),
                 font=ui_font(self.theme, 16, alt=True),
                 text_color=self.theme["muted"],
             )
@@ -251,7 +260,7 @@ class DownloaderView(ctk.CTkFrame):
                 )
                 self.btn_empty_scan_ym.pack(pady=(0, 10))
             return
-        
+
         for pl in visible_playlists:
             var = ctk.BooleanVar()
             cb = ctk.CTkCheckBox(
@@ -276,20 +285,30 @@ class DownloaderView(ctk.CTkFrame):
             self.controller.on_log(self.i18n.t("downloader.ym.url.error"))
 
     def _on_source_changed(self, value):
-        self.current_source = "vk" if value == self.i18n.t("downloader.source.vk") else "yandex"
+        self.current_source = (
+            "vk" if value == self.i18n.t("downloader.source.vk") else "yandex"
+        )
         if hasattr(self.controller, "set_preferred_source"):
             self.controller.set_preferred_source(self.current_source)
         self._update_source_controls()
         self.update_playlists(self.all_playlists)
 
     def apply_preferred_source(self):
-        preferred = self.controller.get_preferred_source() if hasattr(self.controller, "get_preferred_source") else "vk"
+        preferred = (
+            self.controller.get_preferred_source()
+            if hasattr(self.controller, "get_preferred_source")
+            else "vk"
+        )
         self.set_source(preferred)
 
     def set_source(self, source):
         normalized = source if source in ("vk", "yandex") else "vk"
         self.current_source = normalized
-        self.source_selector.set(self.i18n.t("downloader.source.vk") if normalized == "vk" else self.i18n.t("downloader.source.yandex"))
+        self.source_selector.set(
+            self.i18n.t("downloader.source.vk")
+            if normalized == "vk"
+            else self.i18n.t("downloader.source.yandex")
+        )
         self._update_source_controls()
         self.update_playlists(self.all_playlists)
 
@@ -297,12 +316,20 @@ class DownloaderView(ctk.CTkFrame):
         self.apply_preferred_source()
 
     def _matches_source(self, playlist):
-        is_yandex = str(getattr(playlist, "id", "")).startswith("ym:") or "music.yandex.ru" in (getattr(playlist, "url", "") or "")
+        is_yandex = str(getattr(playlist, "id", "")).startswith(
+            "ym:"
+        ) or "music.yandex.ru" in (getattr(playlist, "url", "") or "")
         return (not is_yandex) if self.current_source == "vk" else is_yandex
 
     def _update_source_controls(self):
         is_vk = self.current_source == "vk"
-        self.lbl_vk_hint.configure(text=self.i18n.t("downloader.vk.settings.hint") if is_vk else self.i18n.t("downloader.ym.hint"))
+        self.lbl_vk_hint.configure(
+            text=(
+                self.i18n.t("downloader.vk.settings.hint")
+                if is_vk
+                else self.i18n.t("downloader.ym.hint")
+            )
+        )
         self.btn_scan_yandex.configure(state="disabled" if is_vk else "normal")
         self.ym_url_entry.configure(state="disabled" if is_vk else "normal")
         self.btn_ym_scan_url.configure(state="disabled" if is_vk else "normal")
@@ -312,40 +339,63 @@ class DownloaderView(ctk.CTkFrame):
         for pl, var, cb in self.checkboxes:
             if var.get():
                 selected.append(pl)
-        
+
         if not selected:
             # Maybe log error to controller?
             self.controller.on_log(self.i18n.t("downloader.select.error"))
             return
-            
+
         settings = {
             "use_covers": self.var_covers.get(),
             "use_id3": self.var_id3.get(),
             # Fetch strategy dynamically from controller which gets it from UI
-            "strategy": self.controller.get_current_strategy()
+            "strategy": self.controller.get_current_strategy(),
         }
-        
+
         self.controller.start_download(selected, settings)
 
     def set_connected_status(self, connected):
         self.is_connected = connected
         if connected:
-            self.lbl_status.configure(text=self.i18n.t("app.status.connected"), text_color=self.theme["success"])
+            self.lbl_status.configure(
+                text=self.i18n.t("app.status.connected"),
+                text_color=self.theme["success"],
+            )
         else:
-            self.lbl_status.configure(text=self.i18n.t("downloader.status.idle"), text_color=self.theme["muted"])
+            self.lbl_status.configure(
+                text=self.i18n.t("downloader.status.idle"),
+                text_color=self.theme["muted"],
+            )
 
     def update_selected_counter(self):
         total = len(self.checkboxes)
         selected = sum(1 for _, var, _ in self.checkboxes if var.get())
-        self.lbl_selected.configure(text=self.i18n.t("downloader.count", selected=selected, total=total))
+        self.lbl_selected.configure(
+            text=self.i18n.t("downloader.count", selected=selected, total=total)
+        )
 
     def apply_language(self):
         self.lbl_title.configure(text=self.i18n.t("downloader.title"))
         self.lbl_subtitle.configure(text=self.i18n.t("downloader.subtitle"))
         self.lbl_source.configure(text=self.i18n.t("downloader.source"))
-        self.source_selector.configure(values=[self.i18n.t("downloader.source.vk"), self.i18n.t("downloader.source.yandex")])
-        self.source_selector.set(self.i18n.t("downloader.source.vk") if self.current_source == "vk" else self.i18n.t("downloader.source.yandex"))
-        self.lbl_vk_hint.configure(text=self.i18n.t("downloader.vk.settings.hint") if self.current_source == "vk" else self.i18n.t("downloader.ym.hint"))
+        self.source_selector.configure(
+            values=[
+                self.i18n.t("downloader.source.vk"),
+                self.i18n.t("downloader.source.yandex"),
+            ]
+        )
+        self.source_selector.set(
+            self.i18n.t("downloader.source.vk")
+            if self.current_source == "vk"
+            else self.i18n.t("downloader.source.yandex")
+        )
+        self.lbl_vk_hint.configure(
+            text=(
+                self.i18n.t("downloader.vk.settings.hint")
+                if self.current_source == "vk"
+                else self.i18n.t("downloader.ym.hint")
+            )
+        )
         self.btn_scan_yandex.configure(text=self.i18n.t("downloader.scan.yandex"))
         self.set_connected_status(self.is_connected)
         self.lbl_options.configure(text=self.i18n.t("downloader.options"))
@@ -355,10 +405,18 @@ class DownloaderView(ctk.CTkFrame):
         self.scroll.configure(label_text=self.i18n.t("downloader.playlists"))
         self.btn_start.configure(text=self.i18n.t("downloader.start"))
         self.lbl_ym_header.configure(text=self.i18n.t("downloader.ym.header"))
-        self.ym_url_entry.configure(placeholder_text=self.i18n.t("downloader.ym.url.placeholder"))
+        self.ym_url_entry.configure(
+            placeholder_text=self.i18n.t("downloader.ym.url.placeholder")
+        )
         self.btn_ym_scan_url.configure(text=self.i18n.t("downloader.ym.scan.playlist"))
         if hasattr(self, "lbl_empty"):
-            self.lbl_empty.configure(text=self.i18n.t("downloader.empty.vk") if self.current_source == "vk" else self.i18n.t("downloader.empty"))
+            self.lbl_empty.configure(
+                text=(
+                    self.i18n.t("downloader.empty.vk")
+                    if self.current_source == "vk"
+                    else self.i18n.t("downloader.empty")
+                )
+            )
         if hasattr(self, "btn_empty_scan_ym"):
             self.btn_empty_scan_ym.configure(text=self.i18n.t("downloader.scan.yandex"))
         self._update_source_controls()

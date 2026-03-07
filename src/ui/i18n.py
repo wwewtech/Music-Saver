@@ -19,7 +19,6 @@ class I18n:
                 "app.login.success": "Вход выполнен. Теперь можно сканировать плейлисты.",
                 "app.status.connected": "Статус: Подключено",
                 "app.playlists.received": "Плейлисты получены. Переключаемся на вкладку загрузок...",
-
                 "dashboard.title": "Панель статистики",
                 "dashboard.subtitle": "Ключевые метрики проекта в реальном времени",
                 "dashboard.total": "Всего плейлистов",
@@ -29,7 +28,6 @@ class I18n:
                 "dashboard.ready": "Состояние системы: Готово",
                 "dashboard.tip.title": "Что дальше",
                 "dashboard.tip.body": "Откройте «Настройки», привяжите VK и отсканируйте плейлисты. Затем запускайте обработку в «Загрузках».",
-
                 "downloader.login": "Привязать VK",
                 "downloader.scan": "Сканировать плейлисты",
                 "downloader.scan.yandex": "Сканировать Яндекс плейлисты",
@@ -51,12 +49,10 @@ class I18n:
                 "downloader.count": "Выбрано: {selected} из {total}",
                 "downloader.vk.settings.hint": "VK-привязка и сканирование плейлистов доступны в разделе «Настройки».",
                 "downloader.ym.hint": "Для Яндекс нажмите сканирование: откроется браузер, войдите в аккаунт и будут собраны плейлисты из «Коллекции».",
-
                 "downloader.ym.header": "Yandex Music",
                 "downloader.ym.url.placeholder": "https://music.yandex.ru/playlists/... или /users/.../playlists/...",
                 "downloader.ym.scan.playlist": "Сканировать",
                 "downloader.ym.url.error": "Введите ссылку на плейлист Яндекс.Музыки.",
-
                 "telegram.connection": "Настройки подключения",
                 "telegram.title": "Настройки интеграций",
                 "telegram.subtitle": "Управляйте привязкой VK и параметрами Telegram.",
@@ -86,11 +82,9 @@ class I18n:
                 "telegram.ym.status.idle": "Статус Yandex: не синхронизировано",
                 "telegram.ym.status.pending": "Статус Yandex: выполняется сканирование...",
                 "telegram.ym.status.ready": "Статус Yandex: плейлисты синхронизированы",
-
                 "logs.title": "Журнал событий",
                 "logs.subtitle": "Все этапы обработки и системные сообщения в одном месте",
                 "logs.clear": "Очистить",
-
                 "wizard.title": "OpenSpace VK Music Saver",
                 "wizard.next": "Далее →",
                 "wizard.back": "← Назад",
@@ -145,7 +139,6 @@ class I18n:
                 "wizard.storage.desc": "Куда сохранять скачанные файлы?",
                 "wizard.storage.path": "Путь к папке загрузок",
                 "wizard.storage.browse": "Выбрать папку",
-
                 "strategy.download_only": "Только скачивание",
                 "strategy.download_upload": "Скачивание + отправка в Telegram",
                 "strategy.direct_transfer": "Прямая передача (без хранения)",
@@ -165,7 +158,6 @@ class I18n:
                 "app.login.success": "Login successful. You can scan playlists now.",
                 "app.status.connected": "Status: Connected",
                 "app.playlists.received": "Playlists loaded. Switching to downloader view...",
-
                 "dashboard.title": "Dashboard",
                 "dashboard.subtitle": "Core project metrics in real time",
                 "dashboard.total": "Total Playlists",
@@ -175,7 +167,6 @@ class I18n:
                 "dashboard.ready": "System status: Ready",
                 "dashboard.tip.title": "Next step",
                 "dashboard.tip.body": "Open Settings, connect VK and scan playlists. Then run processing in Downloads.",
-
                 "downloader.login": "Connect VK",
                 "downloader.scan": "Scan playlists",
                 "downloader.scan.yandex": "Scan Yandex playlists",
@@ -197,12 +188,10 @@ class I18n:
                 "downloader.count": "Selected: {selected} of {total}",
                 "downloader.vk.settings.hint": "VK connection and playlist scan are available in Settings.",
                 "downloader.ym.hint": "For Yandex, run scan: browser will open, sign in, then playlists are collected from Collection.",
-
                 "downloader.ym.header": "Yandex Music",
                 "downloader.ym.url.placeholder": "https://music.yandex.ru/playlists/... or /users/.../playlists/...",
                 "downloader.ym.scan.playlist": "Scan",
                 "downloader.ym.url.error": "Enter a valid Yandex Music playlist URL.",
-
                 "telegram.connection": "Connection settings",
                 "telegram.title": "Integration Settings",
                 "telegram.subtitle": "Manage VK connection and Telegram delivery options.",
@@ -232,11 +221,9 @@ class I18n:
                 "telegram.ym.status.idle": "Yandex status: not synced",
                 "telegram.ym.status.pending": "Yandex status: scanning in progress...",
                 "telegram.ym.status.ready": "Yandex status: playlists synced",
-
                 "logs.title": "Event log",
                 "logs.subtitle": "All processing stages and system messages in one timeline",
                 "logs.clear": "Clear",
-
                 "wizard.title": "OpenSpace VK Music Saver",
                 "wizard.next": "Next →",
                 "wizard.back": "← Back",
@@ -291,7 +278,6 @@ class I18n:
                 "wizard.storage.desc": "Where should downloaded files be stored?",
                 "wizard.storage.path": "Path to downloads",
                 "wizard.storage.browse": "Browse folder",
-
                 "strategy.download_only": "Download only",
                 "strategy.download_upload": "Download + upload to Telegram",
                 "strategy.direct_transfer": "Direct transfer (no local storage)",

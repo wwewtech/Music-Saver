@@ -1,14 +1,47 @@
-/__pycache__
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
 
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
+# C extensions
+*.so
+
+# Distribution / packaging
+bin/
 build/
-/chrome_profile
+develop-eggs/
 dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
 *.egg-info/
+.installed.cfg
 *.egg
-/downloads
-/data
+MANIFEST
+vk_music_saver.spec
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Project specific
+data/
+chromedriver/
+selenium_cache/
+*.log
+*.db
+chrome_profile/
+

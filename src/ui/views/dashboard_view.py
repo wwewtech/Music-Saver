@@ -16,10 +16,18 @@ class DashboardView(ctk.CTkFrame):
         self.container.pack(fill="both", expand=True)
         self.container.grid_columnconfigure((0, 1), weight=1)
 
-        self.card_total = self.create_stat_card(self.container, "dashboard.total", "0", 0, 0)
-        self.card_downloaded = self.create_stat_card(self.container, "dashboard.downloaded", "0", 0, 1)
-        self.card_uploaded = self.create_stat_card(self.container, "dashboard.uploaded", "0", 1, 0)
-        self.card_storage = self.create_stat_card(self.container, "dashboard.storage", "0 MB", 1, 1)
+        self.card_total = self.create_stat_card(
+            self.container, "dashboard.total", "0", 0, 0
+        )
+        self.card_downloaded = self.create_stat_card(
+            self.container, "dashboard.downloaded", "0", 0, 1
+        )
+        self.card_uploaded = self.create_stat_card(
+            self.container, "dashboard.uploaded", "0", 1, 0
+        )
+        self.card_storage = self.create_stat_card(
+            self.container, "dashboard.storage", "0 MB", 1, 1
+        )
 
         self.status_card = ctk.CTkFrame(
             self,
@@ -58,7 +66,7 @@ class DashboardView(ctk.CTkFrame):
             wraplength=860,
         )
         self.lbl_tip_body.pack(fill="x", padx=16, pady=(2, 14))
-        
+
     def create_stat_card(self, parent, title_key, value, row, col):
         card = ctk.CTkFrame(
             parent,
@@ -68,7 +76,7 @@ class DashboardView(ctk.CTkFrame):
             border_color=self.theme["border"],
         )
         card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
-        
+
         lbl_val = ctk.CTkLabel(
             card,
             text=value,
@@ -76,7 +84,7 @@ class DashboardView(ctk.CTkFrame):
             text_color=self.theme["accent"],
         )
         lbl_val.pack(anchor="w", padx=18, pady=(16, 0))
-        
+
         lbl_title = ctk.CTkLabel(
             card,
             text=self.i18n.t(title_key),

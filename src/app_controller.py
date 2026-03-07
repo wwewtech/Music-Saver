@@ -16,13 +16,17 @@ from src.services.vk.link_decoder import LinkDecoder
 from src.services.yandex.parser_service import YandexParserService
 from src.services.yandex.simple_download_service import YandexSimpleDownloadService
 from src.services.download.ffmpeg_service import FFmpegService, DownloadError
-from src.services.download.simple_http_service import SimpleHTTPDownloadService, SimpleHTTPDownloadError
+from src.services.download.simple_http_service import (
+    SimpleHTTPDownloadService,
+    SimpleHTTPDownloadError,
+)
 from src.services.settings_manager import SettingsManager
 from src.services.telegram.telegram_service import TelegramService
 from src.domain.models import Playlist, Track
 from src.domain.tagger import Tagger, sanitize_filename
 from src.config import DOWNLOAD_DIR
 from src.utils.logger import logger
+
 
 class AppController:
     def __init__(self):
@@ -31,11 +35,13 @@ class AppController:
         self.playlist_repo = PlaylistRepository()
         self.track_repo = TrackRepository()
         self.settings_manager = SettingsManager()
-        
+
         # Load TG settings
         settings = self.settings_manager.get_settings()
         logger.debug(f"Загруженные настройки: {settings}")
-        self.telegram_service = TelegramService(settings.get('tg_bot_token'), settings.get('tg_chat_id'))
+        self.telegram_service = TelegramService(
+            settings.get("tg_bot_token"), settings.get("tg_chat_id")
+        )
 
         self.driver = None
         self._login_lock = threading.Lock()
@@ -75,7 +81,9 @@ class AppController:
             return False
 
     def save_tg_settings(self, token, chat_id):
-        logger.info(f"Сохранение настроек Telegram: Token={token[:5]}... ChatID={chat_id}")
+        logger.info(
+            f"Сохранение настроек Telegram: Token={token[:5]}... ChatID={chat_id}"
+        )
         self.settings_manager.save_settings(token, chat_id)
         # Re-init service
         self.telegram_service = TelegramService(token, chat_id)
@@ -115,17 +123,19 @@ class AppController:
     def test_tg_connection(self):
         if not self.telegram_service:
             return False, "Сервис Telegram не инициализирован."
-        return self.telegram_service.send_test_message("Тестовое сообщение из VK Music Saver Pro")
+        return self.telegram_service.send_test_message(
+            "Тестовое сообщение из VK Music Saver Pro"
+        )
 
     def get_tg_settings(self):
         return self.settings_manager.get_settings()
-        
+
     def get_dashboard_stats(self):
         logger.debug("Запрос статистики для дашборда...")
         pl_count = self.playlist_repo.get_count()
         track_stats = self.track_repo.get_stats()
         download_dir = self.get_download_dir()
-        
+
         # Calculate storage used
         storage_size_mb = 0
         try:
@@ -141,13 +151,13 @@ class AppController:
                 logger.debug(f"Папка загрузок {download_dir} не найдена.")
         except Exception as e:
             logger.error(f"Error calculating storage: {e}")
-            
+
         stats = {
             "playlists": pl_count,
             "tracks_total": track_stats["total"],
             "tracks_downloaded": track_stats["downloaded"],
             "tracks_uploaded": track_stats["uploaded"],
-            "storage_mb": storage_size_mb
+            "storage_mb": storage_size_mb,
         }
         logger.debug(f"Статистика собрана: {stats}")
         return stats
@@ -253,7 +263,7 @@ class AppController:
 
                 result_objects = []
                 for item in pl_dicts:
-                    pl = Playlist(id=item['id'], title=item['title'], url=item['url'])
+                    pl = Playlist(id=item["id"], title=item["title"], url=item["url"])
                     self.playlist_repo.save(pl)
                     result_objects.append(pl)
 
@@ -275,21 +285,31 @@ class AppController:
                 self.set_preferred_source("yandex")
                 self.on_log("Источник переключен на Yandex.")
                 driver = self._ensure_driver()
-                parser = YandexParserService(driver=driver, language=self.get_language())
+                parser = YandexParserService(
+                    driver=driver, language=self.get_language()
+                )
 
                 self.on_log("Если открылось окно подписки — нажмите «Закрыть».")
-                self.on_log("Войдите в свой аккаунт Яндекс в открывшемся браузере. Ожидаем вход...")
+                self.on_log(
+                    "Войдите в свой аккаунт Яндекс в открывшемся браузере. Ожидаем вход..."
+                )
 
-                is_ready = parser.prepare_collection_for_manual_login(login_timeout_seconds=180)
+                is_ready = parser.prepare_collection_for_manual_login(
+                    login_timeout_seconds=180
+                )
                 if not is_ready:
-                    self.on_log("Не удалось дождаться входа в Яндекс за отведенное время.")
+                    self.on_log(
+                        "Не удалось дождаться входа в Яндекс за отведенное время."
+                    )
                     return
 
                 # --- УМНЫЙ ПЕРЕХВАТ ТОКЕНА ДЛЯ СКАЧИВАНИЯ ---
                 self.on_log("Получение ключа доступа (токена) для Яндекс.Музыки...")
                 logger.info("Начинаем процесс получения OAuth токена...")
-                driver.get("https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d")
-                
+                driver.get(
+                    "https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d"
+                )
+
                 ym_token = ""
                 # Ждем до 30 секунд, пока страница не редиректнет нас, отдав токен
                 for _ in range(30):
@@ -297,11 +317,14 @@ class AppController:
                     if "access_token=" in current_url:
                         ym_token = current_url.split("access_token=")[1].split("&")[0]
                         break
-                        
+
                     # Пытаемся автоматически нажать на кнопку "Войти как ..." если она есть
                     try:
                         from selenium.webdriver.common.by import By
-                        btns = driver.find_elements(By.CSS_SELECTOR, "button[type='submit']")
+
+                        btns = driver.find_elements(
+                            By.CSS_SELECTOR, "button[type='submit']"
+                        )
                         for btn in btns:
                             if btn.is_displayed():
                                 driver.execute_script("arguments[0].click();", btn)
@@ -309,18 +332,24 @@ class AppController:
                                 break
                     except Exception:
                         pass
-                        
+
                     time.sleep(1)
-                
+
                 if ym_token:
                     self.settings_manager.set("ym_token", ym_token)
-                    self.on_log("✅ Ключ доступа получен! Загрузка будет работать стабильно.")
+                    self.on_log(
+                        "✅ Ключ доступа получен! Загрузка будет работать стабильно."
+                    )
                     logger.info("Токен Яндекс Музыки успешно получен.")
                 else:
                     self.on_log("⚠️ Не удалось получить ключ доступа автоматически.")
-                    logger.error("Таймаут получения токена Яндекс Музыки. Возможно, нужно было нажать 'Разрешить' в браузере.")
-                
-                self.on_log("Переходим в «Коллекция» → «Плейлисты» и сканируем список...")
+                    logger.error(
+                        "Таймаут получения токена Яндекс Музыки. Возможно, нужно было нажать 'Разрешить' в браузере."
+                    )
+
+                self.on_log(
+                    "Переходим в «Коллекция» → «Плейлисты» и сканируем список..."
+                )
                 driver.get("https://music.yandex.ru/collection/playlists")
                 time.sleep(2)
                 # ----------------------------------------------------
@@ -328,7 +357,9 @@ class AppController:
                 playlists_data = parser.parse_collection_playlists()
 
                 if not playlists_data:
-                    self.on_log("Плейлисты Яндекс не найдены. Проверьте, что вход выполнен и откройте «Коллекция» снова.")
+                    self.on_log(
+                        "Плейлисты Яндекс не найдены. Проверьте, что вход выполнен и откройте «Коллекция» снова."
+                    )
                     return
 
                 added = 0
@@ -362,7 +393,9 @@ class AppController:
                 self.set_preferred_source("yandex")
                 self.on_log("Источник переключен на Yandex.")
                 driver = self._ensure_driver()
-                parser = YandexParserService(driver=driver, language=self.get_language())
+                parser = YandexParserService(
+                    driver=driver, language=self.get_language()
+                )
                 title, track_dicts = parser.parse_playlist_page(url)
 
                 pl_id = YandexParserService.make_playlist_id(url)
@@ -370,7 +403,7 @@ class AppController:
                 self.playlist_repo.save(playlist)
 
                 # Cache parsed tracks so download doesn't need to re-parse
-                self._ym_cached_tracks = getattr(self, '_ym_cached_tracks', {})
+                self._ym_cached_tracks = getattr(self, "_ym_cached_tracks", {})
                 self._ym_cached_tracks[pl_id] = track_dicts
 
                 all_playlists = self.playlist_repo.get_all()
@@ -384,7 +417,9 @@ class AppController:
 
     @staticmethod
     def _is_yandex_playlist(playlist: Playlist) -> bool:
-        return playlist.id.startswith("ym:") or "music.yandex.ru" in (playlist.url or "")
+        return playlist.id.startswith("ym:") or "music.yandex.ru" in (
+            playlist.url or ""
+        )
 
     def start_download(self, selected_playlists: List[Playlist], settings: dict):
         # settings: { "use_id3": bool, "use_covers": bool, "strategy": str }
@@ -407,7 +442,10 @@ class AppController:
             self.on_download_complete()
             return
 
-        if strategy in ["download_upload", "direct_transfer"] and not self.is_telegram_configured():
+        if (
+            strategy in ["download_upload", "direct_transfer"]
+            and not self.is_telegram_configured()
+        ):
             warn_msg = "Telegram не настроен. Переключаемся на режим 'только скачивание на ПК'."
             self.on_log(warn_msg)
             logger.warning(warn_msg)
@@ -415,7 +453,9 @@ class AppController:
             self.set_processing_strategy(strategy)
 
         def _task():
-            has_vk_playlists = any(not self._is_yandex_playlist(pl) for pl in selected_playlists)
+            has_vk_playlists = any(
+                not self._is_yandex_playlist(pl) for pl in selected_playlists
+            )
             if has_vk_playlists and not self.driver:
                 self.on_log("Ошибка: Браузер не запущен. Пожалуйста, войдите в ВК.")
                 self.is_running = False
@@ -425,10 +465,14 @@ class AppController:
             parser = ParserService(self.driver, self.user_id) if self.driver else None
             decoder = LinkDecoder(self.driver) if self.driver else None
             ym_parser = YandexParserService(
-                driver=self.driver or self._ensure_driver() if any(self._is_yandex_playlist(p) for p in selected_playlists) else None,
+                driver=(
+                    self.driver or self._ensure_driver()
+                    if any(self._is_yandex_playlist(p) for p in selected_playlists)
+                    else None
+                ),
                 language=self.get_language(),
             )
-            
+
             logger.info(f"Запуск процесса. Стратегия: {strategy}")
             self.on_log(f"Запуск процесса. Стратегия: {strategy}")
 
@@ -443,10 +487,10 @@ class AppController:
                     # Parse Tracks
                     if self._is_yandex_playlist(pl):
                         # Try cache first (from scan), then re-parse
-                        cached = getattr(self, '_ym_cached_tracks', {}).get(pl.id)
+                        cached = getattr(self, "_ym_cached_tracks", {}).get(pl.id)
                         if cached:
                             track_dicts = cached
-                        elif pl.id == 'ym:chart:top100':
+                        elif pl.id == "ym:chart:top100":
                             track_dicts = ym_parser.parse_chart_tracks()
                         else:
                             _, track_dicts = ym_parser.parse_playlist_page(pl.url)
@@ -476,7 +520,7 @@ class AppController:
 
                     progress_val = (i + 1) / total
                     self.on_progress(progress_val)
-                    
+
                     # Convert dict to Domain Model
                     track = Track(
                         id=t_data["id"],
@@ -508,7 +552,9 @@ class AppController:
                         f"idx={i + 1}/{total} has_url={bool(track.url)} duration={track.duration}"
                     )
 
-                    safe_title = sanitize_filename(f"{track.artist} - {track.title}")[:100]
+                    safe_title = sanitize_filename(f"{track.artist} - {track.title}")[
+                        :100
+                    ]
                     file_name = f"{safe_title}.mp3"
                     file_path = os.path.join(pl_dir, file_name)
 
@@ -521,28 +567,35 @@ class AppController:
                             logger.warning(
                                 f"[TRACK_INVALID_LOCAL] reason=existing_file_not_audio file={file_path} size={os.path.getsize(file_path)}"
                             )
-                            self.on_log(f"Найден невалидный файл, перекачиваю: {safe_title}")
+                            self.on_log(
+                                f"Найден невалидный файл, перекачиваю: {safe_title}"
+                            )
                             try:
                                 os.remove(file_path)
                             except Exception as remove_err:
                                 logger.warning(
                                     f"[TRACK_INVALID_LOCAL] failed_to_remove file={file_path} error={remove_err}"
                                 )
-                    
+
                     if file_exists:
-                         logger.info(
-                             f"[TRACK_SKIP] reason=file_exists file={file_path} size={os.path.getsize(file_path)}"
-                         )
-                         self.on_log(f"Файл найден: {safe_title}")
+                        logger.info(
+                            f"[TRACK_SKIP] reason=file_exists file={file_path} size={os.path.getsize(file_path)}"
+                        )
+                        self.on_log(f"Файл найден: {safe_title}")
                     else:
                         if track.source == "yandex":
                             # ── ИСПОЛЬЗУЕМ БЫСТРОЕ API ЯНДЕКСА ВМЕСТО БРАУЗЕРА ──
                             self.on_log(f"Yandex: скачивание: {safe_title}")
-                            logger.info(f"Yandex: начало скачивания через API: {safe_title}")
+                            logger.info(
+                                f"Yandex: начало скачивания через API: {safe_title}"
+                            )
                             try:
-                                from src.services.yandex.download_service import YandexDownloadService
+                                from src.services.yandex.download_service import (
+                                    YandexDownloadService,
+                                )
+
                                 ym_token = self.settings_manager.get("ym_token", "")
-                                
+
                                 if not ym_token:
                                     msg = "❌ Ошибка: Нет токена! Вернитесь в 'Настройки', нажмите 'Сканировать Яндекс плейлисты' и дождитесь зеленого сообщения о получении ключа."
                                     self.on_log(msg)
@@ -557,15 +610,23 @@ class AppController:
                                     logger.error(msg)
                                     file_exists = False
                                     continue
-                                
+
                                 # Разбираем ID трека
-                                track_id, album_id = YandexDownloadService.extract_ids_from_track_id(track.id)
-                                
+                                track_id, album_id = (
+                                    YandexDownloadService.extract_ids_from_track_id(
+                                        track.id
+                                    )
+                                )
+
                                 # Качаем трек (библиотека сама вытянет прямую ссылку, обойдет DRM и загрузит MP3)
-                                ok = ym_api.download_track(track_id, album_id, file_path)
-                                
+                                ok = ym_api.download_track(
+                                    track_id, album_id, file_path
+                                )
+
                                 if ok:
-                                    logger.info(f"[YM_TRACK_OK] track_id={track.id} file={file_path}")
+                                    logger.info(
+                                        f"[YM_TRACK_OK] track_id={track.id} file={file_path}"
+                                    )
                                     self.on_log(f"Тегирование: {safe_title}")
                                     tag_ok = Tagger.apply_tags(
                                         file_path,
@@ -575,7 +636,9 @@ class AppController:
                                         use_covers=settings.get("use_covers", True),
                                     )
                                     if tag_ok:
-                                        self.track_repo.update_status(track.id, "downloaded", local_path=file_path)
+                                        self.track_repo.update_status(
+                                            track.id, "downloaded", local_path=file_path
+                                        )
                                         file_exists = True
                                     else:
                                         logger.warning("Ошибка тегирования Яндекса.")
@@ -585,14 +648,18 @@ class AppController:
                                     self.on_log(msg)
                                     logger.error(msg)
                                     file_exists = False
-                                    
+
                             except Exception as de:
-                                logger.exception(f"[YM_TRACK_FAIL] Исключение: error={de}")
+                                logger.exception(
+                                    f"[YM_TRACK_FAIL] Исключение: error={de}"
+                                )
                                 self.on_log(f"Yandex ошибка: {de}")
                                 file_exists = False
                         else:
                             # ── VK simple direct download (no tokens) with fallback ──
-                            logger.info(f"Файл не найден или слишком мал. Начинаем загрузку: {safe_title}")
+                            logger.info(
+                                f"Файл не найден или слишком мал. Начинаем загрузку: {safe_title}"
+                            )
                             self.on_log(f"Скачивание: {safe_title}")
                             direct_url = ""
                             raw_url = (t_data.get("url") or "").strip()
@@ -619,14 +686,22 @@ class AppController:
                                 )
 
                                 try:
-                                    logger.debug(f"Пробуем простой HTTP download для {file_path}")
-                                    SimpleHTTPDownloadService.download(direct_url, file_path)
-                                    logger.info(f"Успешно скачано простым HTTP методом: {safe_title}")
+                                    logger.debug(
+                                        f"Пробуем простой HTTP download для {file_path}"
+                                    )
+                                    SimpleHTTPDownloadService.download(
+                                        direct_url, file_path
+                                    )
+                                    logger.info(
+                                        f"Успешно скачано простым HTTP методом: {safe_title}"
+                                    )
                                 except SimpleHTTPDownloadError as http_err:
                                     logger.warning(
                                         f"[VK_TRACK_HTTP_FAIL] track_id={track.id} reason={http_err}"
                                     )
-                                    self.on_log(f"VK: прямое скачивание не удалось, пробуем ffmpeg: {safe_title}")
+                                    self.on_log(
+                                        f"VK: прямое скачивание не удалось, пробуем ffmpeg: {safe_title}"
+                                    )
                                     try:
                                         FFmpegService.download(direct_url, file_path)
                                     except DownloadError as ff_err:
@@ -636,10 +711,14 @@ class AppController:
                                         self.on_log(f"Ошибка загрузки: {ff_err}")
                                         file_exists = False
                                     else:
-                                        logger.info(f"[VK_TRACK_FFMPEG_OK] track_id={track.id} file={file_path}")
+                                        logger.info(
+                                            f"[VK_TRACK_FFMPEG_OK] track_id={track.id} file={file_path}"
+                                        )
                                         file_exists = True
                                 else:
-                                    logger.info(f"[VK_TRACK_HTTP_OK] track_id={track.id} file={file_path}")
+                                    logger.info(
+                                        f"[VK_TRACK_HTTP_OK] track_id={track.id} file={file_path}"
+                                    )
                                     file_exists = True
 
                                 if file_exists:
@@ -653,10 +732,16 @@ class AppController:
                                             use_id3=settings.get("use_id3", True),
                                             use_covers=settings.get("use_covers", True),
                                         )
-                                        self.track_repo.update_status(track.id, "downloaded", local_path=file_path)
-                                        logger.info(f"Загрузка и тегирование завершены: {safe_title}")
+                                        self.track_repo.update_status(
+                                            track.id, "downloaded", local_path=file_path
+                                        )
+                                        logger.info(
+                                            f"Загрузка и тегирование завершены: {safe_title}"
+                                        )
                                     except Exception as tag_err:
-                                        logger.exception(f"Ошибка Tagger для {track.id}")
+                                        logger.exception(
+                                            f"Ошибка Tagger для {track.id}"
+                                        )
                                         self.on_log(f"Ошибка тегирования: {tag_err}")
                                         file_exists = False
 
@@ -665,8 +750,13 @@ class AppController:
                     )
 
                     # Telegram Upload Logic
-                    if file_exists and strategy in ["download_upload", "direct_transfer"]:
-                        logger.info(f"Подготовка к загрузке в TG. Стратегия={strategy}, Файл={file_path}, TopicID={topic_id}")
+                    if file_exists and strategy in [
+                        "download_upload",
+                        "direct_transfer",
+                    ]:
+                        logger.info(
+                            f"Подготовка к загрузке в TG. Стратегия={strategy}, Файл={file_path}, TopicID={topic_id}"
+                        )
                         self.on_log(f"Загрузка в Telegram...")
 
                         # Extract Thumbnail for Telegram
@@ -674,21 +764,36 @@ class AppController:
                         try:
                             # Try with ID3 (mutagen)
                             audio_tags = ID3(file_path)
-                            logger.debug(f"Теги найдены в файле: {list(audio_tags.keys())}")
-                            
+                            logger.debug(
+                                f"Теги найдены в файле: {list(audio_tags.keys())}"
+                            )
+
                             # Look for APIC frames
-                            apic_frames = [tag for tag in audio_tags.values() if isinstance(tag, APIC)]
+                            apic_frames = [
+                                tag
+                                for tag in audio_tags.values()
+                                if isinstance(tag, APIC)
+                            ]
                             if apic_frames:
                                 # Prioritize Cover (type 3) or Other (type 0)
-                                cover = next((f for f in apic_frames if f.type == 3), apic_frames[0])
+                                cover = next(
+                                    (f for f in apic_frames if f.type == 3),
+                                    apic_frames[0],
+                                )
                                 thumbnail_data = cover.data
-                                logger.info(f"Обложка успешно извлечена. Тип: {cover.mime}, Размер: {len(thumbnail_data)} байт")
+                                logger.info(
+                                    f"Обложка успешно извлечена. Тип: {cover.mime}, Размер: {len(thumbnail_data)} байт"
+                                )
                             else:
-                                logger.warning("В тегах файла не найдены кадры APIC (обложка).")
-                                
+                                logger.warning(
+                                    "В тегах файла не найдены кадры APIC (обложка)."
+                                )
+
                         except Exception as e_thumb:
-                            logger.warning(f"Ошибка при попытке извлечь обложку для Telegram: {e_thumb}")
-                            # Fallback: check if we have cover_url and can download it again quickly? 
+                            logger.warning(
+                                f"Ошибка при попытке извлечь обложку для Telegram: {e_thumb}"
+                            )
+                            # Fallback: check if we have cover_url and can download it again quickly?
                             # Better not to delay. Maybe track.cover_url is available?
                             # For now, just log.
 
@@ -700,33 +805,49 @@ class AppController:
                                 title=track.title,
                                 duration=track.duration,
                                 topic_id=topic_id,
-                                thumbnail=thumbnail_data
+                                thumbnail=thumbnail_data,
                             )
                             if msg:
                                 msg_id = str(msg.message_id)
                                 file_id = msg.audio.file_id if msg.audio else None
-                                logger.info(f"Трек загружен в ТГ! MessageID={msg_id} FileID={file_id}")
-                                self.track_repo.update_tg_status(track.id, 'uploaded', msg_id, file_id)
+                                logger.info(
+                                    f"Трек загружен в ТГ! MessageID={msg_id} FileID={file_id}"
+                                )
+                                self.track_repo.update_tg_status(
+                                    track.id, "uploaded", msg_id, file_id
+                                )
                                 self.on_log(f"TG: Успех.")
-                                
+
                                 # Process "Direct Transfer" - Delete after upload
                                 if strategy == "direct_transfer":
-                                    logger.info(f"Удаление локального файла (Direct Transfer): {file_path}")
+                                    logger.info(
+                                        f"Удаление локального файла (Direct Transfer): {file_path}"
+                                    )
                                     try:
                                         os.remove(file_path)
                                         self.on_log(f"Файл удален (Direct Transfer).")
-                                        self.track_repo.update_status(track.id, "deleted_after_upload")
+                                        self.track_repo.update_status(
+                                            track.id, "deleted_after_upload"
+                                        )
                                     except OSError as e:
-                                        logger.error(f"Не удалось удалить файл {file_path}: {e}")
+                                        logger.error(
+                                            f"Не удалось удалить файл {file_path}: {e}"
+                                        )
                                         self.on_log(f"Ошибка удаления файла: {e}")
                             else:
-                                logger.warning("TelegramService вернул None при загрузке.")
-                                self.on_log("TG: Пропущен (сервис недоступен или ошибка)")
-                                self.track_repo.update_tg_status(track.id, 'failed')
+                                logger.warning(
+                                    "TelegramService вернул None при загрузке."
+                                )
+                                self.on_log(
+                                    "TG: Пропущен (сервис недоступен или ошибка)"
+                                )
+                                self.track_repo.update_tg_status(track.id, "failed")
                         except Exception as e:
-                            logger.exception(f"Исключение при выгрузке в ТГ трека {track.id}")
+                            logger.exception(
+                                f"Исключение при выгрузке в ТГ трека {track.id}"
+                            )
                             self.on_log(f"TG Ошибка: {e}")
-                            self.track_repo.update_tg_status(track.id, 'failed')
+                            self.track_repo.update_tg_status(track.id, "failed")
 
             self.is_running = False
             self.on_download_complete()

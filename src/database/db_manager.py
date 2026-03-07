@@ -56,11 +56,12 @@ class DBManager:
             # Check if columns exist, if not add them
             cursor.execute("SELECT tg_status FROM tracks LIMIT 1")
         except sqlite3.OperationalError:
-            cursor.execute("ALTER TABLE tracks ADD COLUMN tg_status TEXT DEFAULT 'pending'")
+            cursor.execute(
+                "ALTER TABLE tracks ADD COLUMN tg_status TEXT DEFAULT 'pending'"
+            )
             cursor.execute("ALTER TABLE tracks ADD COLUMN tg_message_id TEXT")
             cursor.execute("ALTER TABLE tracks ADD COLUMN tg_file_id TEXT")
             print("DB Schema upgraded: Added Telegram columns to tracks table.")
-
 
     def close(self):
         if self._connection:

@@ -80,7 +80,9 @@ class TrackRepository:
             )
         self.conn.commit()
 
-    def update_tg_status(self, track_id: str, status: str, message_id: str = None, file_id: str = None):
+    def update_tg_status(
+        self, track_id: str, status: str, message_id: str = None, file_id: str = None
+    ):
         cursor = self.conn.cursor()
         query = "UPDATE tracks SET tg_status = ?"
         params = [status]
@@ -90,10 +92,10 @@ class TrackRepository:
         if file_id:
             query += ", tg_file_id = ?"
             params.append(file_id)
-        
+
         query += " WHERE id = ?"
         params.append(track_id)
-        
+
         try:
             cursor.execute(query, tuple(params))
             self.conn.commit()
@@ -102,24 +104,19 @@ class TrackRepository:
 
     def get_stats(self):
         cursor = self.conn.cursor()
-        stats = {
-            "total": 0,
-            "downloaded": 0,
-            "uploaded": 0
-        }
+        stats = {"total": 0, "downloaded": 0, "uploaded": 0}
         try:
             cursor.execute("SELECT COUNT(*) FROM tracks")
             res = cursor.fetchone()
             stats["total"] = res[0] if res else 0
-            
+
             cursor.execute("SELECT COUNT(*) FROM tracks WHERE status = 'downloaded'")
             res = cursor.fetchone()
             stats["downloaded"] = res[0] if res else 0
-            
+
             cursor.execute("SELECT COUNT(*) FROM tracks WHERE tg_status = 'uploaded'")
             res = cursor.fetchone()
             stats["uploaded"] = res[0] if res else 0
         except Exception as e:
             print(f"DB Error (TrackRepository.get_stats): {e}")
         return stats
-

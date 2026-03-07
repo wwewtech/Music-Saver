@@ -25,7 +25,7 @@ class ParserService:
         logger.info(f"Переход на страницу плейлистов: {url}")
         self.driver.get(url)
         time.sleep(3)
-        
+
         logger.info("Начинаем прокрутку списка плейлистов...")
         self._scroll_to_end()
 
@@ -55,7 +55,7 @@ class ParserService:
             except Exception as e:
                 logger.warning(f"Ошибка при парсинге элемента плейлиста [{i}]: {e}")
                 pass
-        
+
         logger.info(f"Успешно обработано плейлистов: {len(playlists)}")
         return playlists
 
@@ -63,7 +63,7 @@ class ParserService:
         logger.info(f"Загрузка страницы плейлиста для парсинга треков: {url}")
         self.driver.get(url)
         time.sleep(4)
-        
+
         logger.info("Раскрываем плейлист полностью (expand)...")
         self._expand_playlist_fully()
 
@@ -81,7 +81,10 @@ class ParserService:
                 missing_url += 1
             if not (t.get("access_key") or "").strip():
                 missing_access += 1
-            if not (t.get("action_hash") or "").strip() or not (t.get("url_hash") or "").strip():
+            if (
+                not (t.get("action_hash") or "").strip()
+                or not (t.get("url_hash") or "").strip()
+            ):
                 missing_hashes += 1
 
         logger.info(

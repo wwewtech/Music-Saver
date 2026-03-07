@@ -24,7 +24,7 @@ def setup_logger():
     # Console Handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(file_formatter)
-    console_handler.setLevel(logging.INFO) # Keep console cleaner, but file detailed
+    console_handler.setLevel(logging.INFO)  # Keep console cleaner, but file detailed
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)

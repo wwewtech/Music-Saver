@@ -16,7 +16,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from src.config import PROFILE_DIR
 from src.services.download.ffmpeg_service import FFmpegService, DownloadError
-from src.services.download.simple_http_service import SimpleHTTPDownloadService, SimpleHTTPDownloadError
+from src.services.download.simple_http_service import (
+    SimpleHTTPDownloadService,
+    SimpleHTTPDownloadError,
+)
 from src.utils.logger import logger
 
 
@@ -76,7 +79,10 @@ class YandexSimpleDownloadService:
                 payload = json.loads(item.get("message", "{}"))
                 message = payload.get("message", {})
                 method = message.get("method", "")
-                if method not in ("Network.requestWillBeSent", "Network.responseReceived"):
+                if method not in (
+                    "Network.requestWillBeSent",
+                    "Network.responseReceived",
+                ):
                     continue
 
                 params = message.get("params", {}) or {}
@@ -91,7 +97,9 @@ class YandexSimpleDownloadService:
                 if not url.startswith("http"):
                     continue
                 lurl = url.lower()
-                if not YandexSimpleDownloadService._is_likely_media_url(lurl) and not (mime and ("audio" in mime or "mpegurl" in mime)):
+                if not YandexSimpleDownloadService._is_likely_media_url(lurl) and not (
+                    mime and ("audio" in mime or "mpegurl" in mime)
+                ):
                     continue
 
                 rows.append(f"{method}|mime={mime or '-'}|url={url[:180]}")
@@ -135,7 +143,9 @@ class YandexSimpleDownloadService:
                 break
 
         if clicked:
-            logger.info(f"[YM_BROWSER_DL] playback_start_click_ok selector={clicked_selector}")
+            logger.info(
+                f"[YM_BROWSER_DL] playback_start_click_ok selector={clicked_selector}"
+            )
         else:
             logger.warning("[YM_BROWSER_DL] playback_start_click_not_found")
 
@@ -180,8 +190,9 @@ class YandexSimpleDownloadService:
     @staticmethod
     def _log_player_state(browser_driver: Any, stage: str) -> None:
         try:
-            state = browser_driver.execute_script(
-                """
+            state = (
+                browser_driver.execute_script(
+                    """
                 const audio = document.querySelector('audio');
                 const titleNode = document.querySelector('[class*="d-track__name"] a, [class*="TrackTitle"], h1');
                 const playBtn = document.querySelector('button[aria-label*="Воспроизв"], button[aria-label*="Play"], button[class*="playButton"], button[class*="PlayButton"]');
@@ -198,7 +209,9 @@ class YandexSimpleDownloadService:
                     playBtnTitle: playBtn ? (playBtn.getAttribute('title') || '') : '',
                 };
                 """
-            ) or {}
+                )
+                or {}
+            )
             logger.info(
                 "[YM_BROWSER_DL][player_state] "
                 f"stage={stage} href={YandexSimpleDownloadService._short_url(state.get('href', ''))} "
@@ -208,7 +221,9 @@ class YandexSimpleDownloadService:
                 f"playBtnAria='{(state.get('playBtnAria') or '')[:40]}' playBtnTitle='{(state.get('playBtnTitle') or '')[:40]}'"
             )
         except Exception as exc:
-            logger.debug(f"[YM_BROWSER_DL][player_state] stage={stage} unavailable error={exc}")
+            logger.debug(
+                f"[YM_BROWSER_DL][player_state] stage={stage} unavailable error={exc}"
+            )
 
     @staticmethod
     def _build_cookie_header(browser_driver: Any) -> str:
@@ -241,8 +256,7 @@ class YandexSimpleDownloadService:
             return ""
 
         normalized_body = (
-            body
-            .replace("\\/", "/")
+            body.replace("\\/", "/")
             .replace("\\u002F", "/")
             .replace("\\u003A", ":")
             .replace("\\u0026", "&")
@@ -257,9 +271,13 @@ class YandexSimpleDownloadService:
                     f"json_top_keys={list(parsed.keys())[:12]}"
                 )
             YandexSimpleDownloadService._collect_urls_from_json(parsed, json_candidates)
-            logger.debug(f"[YM_BROWSER_DL][get_file_info] json_url_candidates={len(json_candidates)}")
+            logger.debug(
+                f"[YM_BROWSER_DL][get_file_info] json_url_candidates={len(json_candidates)}"
+            )
         except Exception:
-            logger.debug("[YM_BROWSER_DL][get_file_info] body is not JSON or JSON parse failed")
+            logger.debug(
+                "[YM_BROWSER_DL][get_file_info] body is not JSON or JSON parse failed"
+            )
 
         if json_candidates:
             for idx, url in enumerate(json_candidates[:5], start=1):
@@ -291,7 +309,9 @@ class YandexSimpleDownloadService:
 
         candidates = re.findall(r"https?://[^\"'\\\s]+", normalized_body)
         if candidates:
-            logger.debug(f"[YM_BROWSER_DL][get_file_info] regex_url_candidates={len(candidates)}")
+            logger.debug(
+                f"[YM_BROWSER_DL][get_file_info] regex_url_candidates={len(candidates)}"
+            )
             for idx, url in enumerate(candidates[:5], start=1):
                 logger.debug(
                     "[YM_BROWSER_DL][get_file_info] "
@@ -302,7 +322,18 @@ class YandexSimpleDownloadService:
             lurl = url.lower()
             if "showcaptcha" in lurl:
                 continue
-            if any(marker in lurl for marker in [".m3u8", "get-mp3", ".mp3", ".m4a", "download", "audio", "stream"]):
+            if any(
+                marker in lurl
+                for marker in [
+                    ".m3u8",
+                    "get-mp3",
+                    ".mp3",
+                    ".m4a",
+                    "download",
+                    "audio",
+                    "stream",
+                ]
+            ):
                 return url
         return ""
 
@@ -330,7 +361,9 @@ class YandexSimpleDownloadService:
                 EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
             )
         except Exception as exc:
-            logger.warning(f"[YM_BROWSER_DL][captcha] failed_to_open_challenge error={exc}")
+            logger.warning(
+                f"[YM_BROWSER_DL][captcha] failed_to_open_challenge error={exc}"
+            )
             return False
 
         wait_seconds = 120
@@ -366,7 +399,9 @@ class YandexSimpleDownloadService:
 
             time.sleep(1.0)
 
-        logger.warning("[YM_BROWSER_DL][captcha] timeout while waiting for manual solve")
+        logger.warning(
+            "[YM_BROWSER_DL][captcha] timeout while waiting for manual solve"
+        )
         return False
 
     @staticmethod
@@ -408,13 +443,17 @@ class YandexSimpleDownloadService:
 
         for request_id in reversed(request_ids[-15:]):
             try:
-                body_obj = browser_driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": request_id})
+                body_obj = browser_driver.execute_cdp_cmd(
+                    "Network.getResponseBody", {"requestId": request_id}
+                )
                 body = str((body_obj or {}).get("body") or "")
                 logger.debug(
                     "[YM_BROWSER_DL][get_file_info] "
                     f"request_id={request_id} body_len={len(body)}"
                 )
-                direct = YandexSimpleDownloadService._extract_direct_audio_from_get_file_info_body(body)
+                direct = YandexSimpleDownloadService._extract_direct_audio_from_get_file_info_body(
+                    body
+                )
                 if direct:
                     logger.info(
                         "[YM_BROWSER_DL][get_file_info] "
@@ -427,6 +466,7 @@ class YandexSimpleDownloadService:
         logger.debug("[YM_BROWSER_DL][get_file_info] no direct url found")
 
         return ""
+
     @staticmethod
     def _is_valid_audio_file(filepath: str) -> bool:
         if not os.path.exists(filepath):
@@ -435,7 +475,9 @@ class YandexSimpleDownloadService:
 
         file_size = os.path.getsize(filepath)
         if file_size < 8 * 1024:
-            logger.warning(f"[YM_BROWSER_DL][validate] too_small size={file_size} file={filepath}")
+            logger.warning(
+                f"[YM_BROWSER_DL][validate] too_small size={file_size} file={filepath}"
+            )
             return False
 
         try:
@@ -447,10 +489,14 @@ class YandexSimpleDownloadService:
                 f"head_hex={head[:16].hex()} contains_ftyp={b'ftyp' in head[:64]} contains_id3={head.startswith(b'ID3')}"
             )
             if b"<html" in head_lower or b"showcaptcha" in head_lower:
-                logger.warning(f"[YM_BROWSER_DL][validate] html_or_captcha_payload file={filepath} size={file_size}")
+                logger.warning(
+                    f"[YM_BROWSER_DL][validate] html_or_captcha_payload file={filepath} size={file_size}"
+                )
                 return False
         except Exception:
-            logger.warning(f"[YM_BROWSER_DL][validate] failed to read head file={filepath}")
+            logger.warning(
+                f"[YM_BROWSER_DL][validate] failed to read head file={filepath}"
+            )
             return False
 
         try:
@@ -469,7 +515,9 @@ class YandexSimpleDownloadService:
             )
             return False
 
-        logger.warning(f"[YM_BROWSER_DL][validate] no_audio_info file={filepath} size={file_size}")
+        logger.warning(
+            f"[YM_BROWSER_DL][validate] no_audio_info file={filepath} size={file_size}"
+        )
         return False
 
     @staticmethod
@@ -576,7 +624,9 @@ class YandexSimpleDownloadService:
                 lurl = url.lower()
                 if "music.yandex" not in lurl:
                     continue
-                if not any(marker in lurl for marker in ["handlers", "api", "track", "player"]):
+                if not any(
+                    marker in lurl for marker in ["handlers", "api", "track", "player"]
+                ):
                     continue
 
                 request_id = params.get("requestId")
@@ -585,7 +635,9 @@ class YandexSimpleDownloadService:
             except Exception:
                 continue
 
-        logger.debug(f"[YM_BROWSER_DL][cdp_body] candidate_request_ids={len(request_ids)}")
+        logger.debug(
+            f"[YM_BROWSER_DL][cdp_body] candidate_request_ids={len(request_ids)}"
+        )
 
         for request_id in reversed(request_ids[-20:]):
             try:
@@ -624,8 +676,9 @@ class YandexSimpleDownloadService:
     @staticmethod
     def _extract_media_url_from_resource_entries(browser_driver: Any) -> str:
         try:
-            urls = browser_driver.execute_script(
-                """
+            urls = (
+                browser_driver.execute_script(
+                    """
                 const out = [];
                 const audio = document.querySelector('audio');
                 if (audio) {
@@ -639,7 +692,9 @@ class YandexSimpleDownloadService:
                 }
                 return out;
                 """
-            ) or []
+                )
+                or []
+            )
         except Exception as exc:
             logger.debug(f"[YM_BROWSER_DL] resource_entries_unavailable error={exc}")
             return ""
@@ -669,7 +724,13 @@ class YandexSimpleDownloadService:
 
         for url in reversed(filtered):
             lurl = url.lower()
-            if ".m3u8" in lurl or "get-mp3" in lurl or ".mp3" in lurl or "get-file-info" in lurl or "/plays?" in lurl:
+            if (
+                ".m3u8" in lurl
+                or "get-mp3" in lurl
+                or ".mp3" in lurl
+                or "get-file-info" in lurl
+                or "/plays?" in lurl
+            ):
                 logger.info(
                     "[YM_BROWSER_DL][resource_entries] "
                     f"priority_candidate={YandexSimpleDownloadService._short_url(url)}"
@@ -708,7 +769,11 @@ class YandexSimpleDownloadService:
                     response = params.get("response", {}) or {}
                     url = response.get("url", "")
                     mime = str(response.get("mimeType", "")).lower()
-                    if mime and not ("audio" in mime or "mpegurl" in mime or "application/vnd.apple.mpegurl" in mime):
+                    if mime and not (
+                        "audio" in mime
+                        or "mpegurl" in mime
+                        or "application/vnd.apple.mpegurl" in mime
+                    ):
                         continue
                 else:
                     continue
@@ -717,7 +782,9 @@ class YandexSimpleDownloadService:
                 if not lurl.startswith("http"):
                     continue
 
-                if method == "Network.responseReceived" and ("audio" in mime or "mpegurl" in mime):
+                if method == "Network.responseReceived" and (
+                    "audio" in mime or "mpegurl" in mime
+                ):
                     response_audio_mime_hits += 1
                     candidates.append(url)
                     continue
@@ -739,7 +806,13 @@ class YandexSimpleDownloadService:
 
         for url in reversed(candidates):
             lurl = url.lower()
-            if ".m3u8" in lurl or "get-mp3" in lurl or ".mp3" in lurl or "get-file-info" in lurl or "/plays?" in lurl:
+            if (
+                ".m3u8" in lurl
+                or "get-mp3" in lurl
+                or ".mp3" in lurl
+                or "get-file-info" in lurl
+                or "/plays?" in lurl
+            ):
                 logger.info(
                     "[YM_BROWSER_DL][perf_logs] "
                     f"priority_candidate={YandexSimpleDownloadService._short_url(url)}"
@@ -776,7 +849,9 @@ class YandexSimpleDownloadService:
                 pass
 
             YandexSimpleDownloadService._try_start_playback(browser_driver)
-            YandexSimpleDownloadService._log_player_state(browser_driver, "after_start_playback")
+            YandexSimpleDownloadService._log_player_state(
+                browser_driver, "after_start_playback"
+            )
 
             media_url = ""
             deadline = time.time() + 20
@@ -790,7 +865,11 @@ class YandexSimpleDownloadService:
                     f"[YM_BROWSER_DL][poll] round={poll_round} remaining={remaining:.2f}s"
                 )
 
-                media_url = YandexSimpleDownloadService._extract_media_url_via_get_file_info(browser_driver)
+                media_url = (
+                    YandexSimpleDownloadService._extract_media_url_via_get_file_info(
+                        browser_driver
+                    )
+                )
                 if media_url:
                     logger.info(
                         "[YM_BROWSER_DL][poll] "
@@ -798,7 +877,9 @@ class YandexSimpleDownloadService:
                     )
                     break
 
-                media_url = YandexSimpleDownloadService._extract_media_url_from_resource_entries(browser_driver)
+                media_url = YandexSimpleDownloadService._extract_media_url_from_resource_entries(
+                    browser_driver
+                )
                 if media_url:
                     logger.info(
                         "[YM_BROWSER_DL][poll] "
@@ -806,7 +887,11 @@ class YandexSimpleDownloadService:
                     )
                     break
 
-                media_url = YandexSimpleDownloadService._extract_media_url_from_perf_logs(browser_driver)
+                media_url = (
+                    YandexSimpleDownloadService._extract_media_url_from_perf_logs(
+                        browser_driver
+                    )
+                )
                 if media_url:
                     logger.info(
                         "[YM_BROWSER_DL][poll] "
@@ -814,7 +899,9 @@ class YandexSimpleDownloadService:
                     )
                     break
 
-                media_url = YandexSimpleDownloadService._extract_media_url_from_cdp_response_body(browser_driver)
+                media_url = YandexSimpleDownloadService._extract_media_url_from_cdp_response_body(
+                    browser_driver
+                )
                 if media_url:
                     logger.info(
                         "[YM_BROWSER_DL][poll] "
@@ -826,25 +913,35 @@ class YandexSimpleDownloadService:
                     rearmed = True
                     logger.info("[YM_BROWSER_DL] rearm_playback_trigger")
                     YandexSimpleDownloadService._try_start_playback(browser_driver)
-                    YandexSimpleDownloadService._log_player_state(browser_driver, "after_rearm_playback")
+                    YandexSimpleDownloadService._log_player_state(
+                        browser_driver, "after_rearm_playback"
+                    )
 
             if not media_url:
                 YandexSimpleDownloadService._log_network_snapshot(browser_driver)
-                YandexSimpleDownloadService._log_player_state(browser_driver, "capture_failed")
+                YandexSimpleDownloadService._log_player_state(
+                    browser_driver, "capture_failed"
+                )
                 logger.warning("[YM_BROWSER_DL] media_url_not_captured")
                 return False
 
             media_class = YandexSimpleDownloadService._classify_media_url(media_url)
             logger.info(f"[YM_BROWSER_DL] media_url_captured prefix={media_url[:140]}")
             logger.info(f"[YM_BROWSER_DL] media_url_class={media_class}")
-            if media_class in ("api_get_file_info", "api_get_file_info_batch", "api_plays"):
+            if media_class in (
+                "api_get_file_info",
+                "api_get_file_info_batch",
+                "api_plays",
+            ):
                 logger.warning(
                     "[YM_BROWSER_DL] selected_api_endpoint_not_direct_stream; "
                     "captcha_or_403_is_probable_without browser-solved challenge"
                 )
 
             try:
-                cookie_header = YandexSimpleDownloadService._build_cookie_header(browser_driver)
+                cookie_header = YandexSimpleDownloadService._build_cookie_header(
+                    browser_driver
+                )
                 headers = {
                     "User-Agent": (
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -863,14 +960,20 @@ class YandexSimpleDownloadService:
                 )
 
                 if ".m3u8" in media_url.lower() or "get-mp3" in media_url.lower():
-                    logger.info("[YM_BROWSER_DL][download_by_media_url] method=ffmpeg(primary)")
+                    logger.info(
+                        "[YM_BROWSER_DL][download_by_media_url] method=ffmpeg(primary)"
+                    )
                     FFmpegService.download(media_url, filepath, headers=headers)
                 else:
                     try:
-                        logger.info("[YM_BROWSER_DL][download_by_media_url] method=ffmpeg(first_try)")
+                        logger.info(
+                            "[YM_BROWSER_DL][download_by_media_url] method=ffmpeg(first_try)"
+                        )
                         FFmpegService.download(media_url, filepath, headers=headers)
                     except DownloadError:
-                        media_class = YandexSimpleDownloadService._classify_media_url(media_url)
+                        media_class = YandexSimpleDownloadService._classify_media_url(
+                            media_url
+                        )
                         logger.warning(
                             "[YM_BROWSER_DL][download_by_media_url] "
                             f"ffmpeg_failed media_class={media_class} switching_to_http"
@@ -883,8 +986,12 @@ class YandexSimpleDownloadService:
                                     "[YM_BROWSER_DL][download_by_media_url] "
                                     "strategy=http_to_temp_then_ffmpeg_transcode"
                                 )
-                                SimpleHTTPDownloadService.download(media_url, temp_input_path, headers=headers)
-                                FFmpegService.transcode_to_mp3(temp_input_path, filepath)
+                                SimpleHTTPDownloadService.download(
+                                    media_url, temp_input_path, headers=headers
+                                )
+                                FFmpegService.transcode_to_mp3(
+                                    temp_input_path, filepath
+                                )
                             finally:
                                 try:
                                     if os.path.exists(temp_input_path):
@@ -892,24 +999,38 @@ class YandexSimpleDownloadService:
                                 except Exception:
                                     pass
                         else:
-                            logger.info("[YM_BROWSER_DL][download_by_media_url] strategy=http_direct")
+                            logger.info(
+                                "[YM_BROWSER_DL][download_by_media_url] strategy=http_direct"
+                            )
                             SimpleHTTPDownloadService.download(media_url, filepath)
             except (DownloadError, SimpleHTTPDownloadError) as exc:
-                logger.warning(f"[YM_BROWSER_DL] download_by_media_url_failed error={exc}")
+                logger.warning(
+                    f"[YM_BROWSER_DL] download_by_media_url_failed error={exc}"
+                )
 
-                if (not retried_after_captcha) and YandexSimpleDownloadService._is_captcha_error(exc):
-                    logger.warning("[YM_BROWSER_DL][captcha] detected; requesting manual solve in browser")
-                    solved = YandexSimpleDownloadService._open_and_wait_captcha_resolution(
-                        browser_driver,
-                        media_url,
+                if (
+                    not retried_after_captcha
+                ) and YandexSimpleDownloadService._is_captcha_error(exc):
+                    logger.warning(
+                        "[YM_BROWSER_DL][captcha] detected; requesting manual solve in browser"
+                    )
+                    solved = (
+                        YandexSimpleDownloadService._open_and_wait_captcha_resolution(
+                            browser_driver,
+                            media_url,
+                        )
                     )
                     if solved:
-                        logger.info("[YM_BROWSER_DL][captcha] solved; retrying track download once")
-                        return YandexSimpleDownloadService._download_via_browser_playback(
-                            track_url,
-                            filepath,
-                            browser_driver,
-                            retried_after_captcha=True,
+                        logger.info(
+                            "[YM_BROWSER_DL][captcha] solved; retrying track download once"
+                        )
+                        return (
+                            YandexSimpleDownloadService._download_via_browser_playback(
+                                track_url,
+                                filepath,
+                                browser_driver,
+                                retried_after_captcha=True,
+                            )
                         )
 
                 return False
@@ -957,7 +1078,9 @@ class YandexSimpleDownloadService:
         }
 
     @staticmethod
-    def _build_attempts(base_opts: dict, selenium_cookie_file: str | None = None) -> list[tuple[str, dict]]:
+    def _build_attempts(
+        base_opts: dict, selenium_cookie_file: str | None = None
+    ) -> list[tuple[str, dict]]:
         attempts: list[tuple[str, dict]] = []
 
         if selenium_cookie_file:
@@ -1037,7 +1160,9 @@ class YandexSimpleDownloadService:
                 )
 
             tmp_file.flush()
-            logger.info(f"[YM_DL_COOKIES] exported_from_driver file={tmp_file.name} count={len(ym_cookies)}")
+            logger.info(
+                f"[YM_DL_COOKIES] exported_from_driver file={tmp_file.name} count={len(ym_cookies)}"
+            )
             return tmp_file.name
         except Exception as exc:
             logger.warning(f"[YM_DL_COOKIES] failed_to_write_cookiefile error={exc}")
@@ -1046,7 +1171,9 @@ class YandexSimpleDownloadService:
             tmp_file.close()
 
     @staticmethod
-    def download_track(track_url: str, filepath: str, browser_driver: Any = None) -> bool:
+    def download_track(
+        track_url: str, filepath: str, browser_driver: Any = None
+    ) -> bool:
         if not track_url or "music.yandex" not in track_url:
             logger.warning(
                 f"[YM_DL_FAIL] reason=invalid_track_url track_url={track_url}"
@@ -1062,14 +1189,18 @@ class YandexSimpleDownloadService:
                 os.remove(filepath)
                 logger.debug(f"[YM_DL_PREP] removed_existing_file={filepath}")
             except Exception as exc:
-                logger.warning(f"[YM_DL_PREP] failed_to_remove_existing_file error={exc}")
+                logger.warning(
+                    f"[YM_DL_PREP] failed_to_remove_existing_file error={exc}"
+                )
 
         logger.info("[YM_DL_MODE] yandex_download_mode=browser_only")
 
-        browser_fallback_ok = YandexSimpleDownloadService._download_via_browser_playback(
-            track_url,
-            filepath,
-            browser_driver,
+        browser_fallback_ok = (
+            YandexSimpleDownloadService._download_via_browser_playback(
+                track_url,
+                filepath,
+                browser_driver,
+            )
         )
         if browser_fallback_ok:
             logger.info("[YM_DL_OK] attempt=browser_playback_capture")

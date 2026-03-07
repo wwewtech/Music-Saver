@@ -127,7 +127,9 @@ class Tagger:
                             if img_data.startswith(b"\x89PNG")
                             else "image/jpeg"
                         )
-                        logger.debug(f"Обложка получена успешно (MIME: {mime}, размер: {len(img_data)} байт)")
+                        logger.debug(
+                            f"Обложка получена успешно (MIME: {mime}, размер: {len(img_data)} байт)"
+                        )
                         audio.tags.add(
                             APIC(
                                 encoding=3,
@@ -138,7 +140,9 @@ class Tagger:
                             )
                         )
                     else:
-                        logger.warning(f"Сервер вернул статус {r.status_code} при загрузке обложки.")
+                        logger.warning(
+                            f"Сервер вернул статус {r.status_code} при загрузке обложки."
+                        )
                 except Exception as e:
                     logger.warning(f"Ошибка при загрузке обложки: {e}")
 

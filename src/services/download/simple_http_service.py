@@ -47,7 +47,9 @@ class SimpleHTTPDownloadService:
         chunks_count = 0
 
         try:
-            with requests.get(url, stream=True, timeout=timeout, headers=headers or {}) as response:
+            with requests.get(
+                url, stream=True, timeout=timeout, headers=headers or {}
+            ) as response:
                 content_type = str(response.headers.get("Content-Type") or "").lower()
                 final_url = str(response.url or "")
                 final_url_lower = final_url.lower()
@@ -57,7 +59,10 @@ class SimpleHTTPDownloadService:
                     f"content_length={response.headers.get('Content-Length')} final_url={final_url}"
                 )
                 if response.history:
-                    redirects = " -> ".join([str(r.status_code) for r in response.history] + [str(response.status_code)])
+                    redirects = " -> ".join(
+                        [str(r.status_code) for r in response.history]
+                        + [str(response.status_code)]
+                    )
                     logger.info(f"[HTTP_DL_RESPONSE] redirects={redirects}")
                 response.raise_for_status()
 

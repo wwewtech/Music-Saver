@@ -46,7 +46,11 @@ class TelegramView(ctk.CTkFrame):
         )
         self.seg_source.pack(fill="x", padx=16, pady=(14, 8))
 
-        initial_source = self.controller.get_preferred_source() if hasattr(self.controller, "get_preferred_source") else "vk"
+        initial_source = (
+            self.controller.get_preferred_source()
+            if hasattr(self.controller, "get_preferred_source")
+            else "vk"
+        )
         if initial_source not in self.source_code_to_label:
             initial_source = "vk"
         self.seg_source.set(self.source_code_to_label[initial_source])
@@ -208,7 +212,7 @@ class TelegramView(ctk.CTkFrame):
             text_color=self.theme["text"],
         )
         self.lbl_conn.pack(anchor="w", padx=8, pady=(0, 5))
-        
+
         conn_frame = ctk.CTkFrame(
             self,
             fg_color=self.theme["panel"],
@@ -217,10 +221,14 @@ class TelegramView(ctk.CTkFrame):
             border_color=self.theme["border"],
         )
         conn_frame.pack(fill="x", padx=6)
-        
-        self.lbl_token, self.entry_token = self.create_input(conn_frame, self.i18n.t("telegram.token"), show="*")
-        self.lbl_chat, self.entry_chat_id = self.create_input(conn_frame, self.i18n.t("telegram.chat_id"))
-        
+
+        self.lbl_token, self.entry_token = self.create_input(
+            conn_frame, self.i18n.t("telegram.token"), show="*"
+        )
+        self.lbl_chat, self.entry_chat_id = self.create_input(
+            conn_frame, self.i18n.t("telegram.chat_id")
+        )
+
         self.lbl_tip = ctk.CTkLabel(
             conn_frame,
             text=self.i18n.t("telegram.tip"),
@@ -230,7 +238,7 @@ class TelegramView(ctk.CTkFrame):
             justify="left",
         )
         self.lbl_tip.pack(anchor="w", padx=20, pady=(0, 10))
-        
+
         # Load existing
         curr = self.controller.get_tg_settings()
         self.entry_token.insert(0, curr.get("tg_bot_token", "") or "")
@@ -239,7 +247,7 @@ class TelegramView(ctk.CTkFrame):
         # Save & Test
         btn_frame = ctk.CTkFrame(conn_frame, fg_color="transparent")
         btn_frame.pack(fill="x", padx=10, pady=10)
-        
+
         self.btn_save = ctk.CTkButton(
             btn_frame,
             text=self.i18n.t("telegram.save"),
@@ -258,7 +266,7 @@ class TelegramView(ctk.CTkFrame):
             **button_style(self.theme, "warning"),
         )
         self.btn_test.pack(side="left", padx=5)
-        
+
         # --- Strategy ---
         self.lbl_strategy = ctk.CTkLabel(
             self,
@@ -267,7 +275,7 @@ class TelegramView(ctk.CTkFrame):
             text_color=self.theme["text"],
         )
         self.lbl_strategy.pack(anchor="w", padx=8, pady=(14, 5))
-        
+
         strat_frame = ctk.CTkFrame(
             self,
             fg_color=self.theme["surface"],
@@ -278,7 +286,7 @@ class TelegramView(ctk.CTkFrame):
         strat_frame.pack(fill="x", padx=6)
 
         strategy_values = self._build_strategy_values()
-        
+
         self.combo_strategy = ctk.CTkComboBox(
             strat_frame,
             values=strategy_values,
@@ -291,7 +299,7 @@ class TelegramView(ctk.CTkFrame):
             initial_strategy = "download_only"
         self.combo_strategy.set(self.strategy_code_to_label[initial_strategy])
         self.combo_strategy.pack(fill="x", padx=20, pady=(16, 5))
-        
+
         self.lab_help = ctk.CTkLabel(
             strat_frame,
             text=self.i18n.t("telegram.strategy.help"),
@@ -303,8 +311,13 @@ class TelegramView(ctk.CTkFrame):
         self.lab_help.pack(anchor="w", padx=20, pady=(0, 20))
 
     def create_input(self, parent, label, show=None):
-        label_widget = ctk.CTkLabel(parent, text=label, text_color=self.theme["text"], font=ui_font(self.theme, 12, "bold", alt=True))
-        label_widget.pack(anchor="w", padx=20, pady=(10,0))
+        label_widget = ctk.CTkLabel(
+            parent,
+            text=label,
+            text_color=self.theme["text"],
+            font=ui_font(self.theme, 12, "bold", alt=True),
+        )
+        label_widget.pack(anchor="w", padx=20, pady=(10, 0))
         entry = ctk.CTkEntry(
             parent,
             show=show,
@@ -352,39 +365,61 @@ class TelegramView(ctk.CTkFrame):
 
     def _apply_source_hint(self):
         source = self.get_selected_source()
-        hint_key = "telegram.source.hint.vk" if source == "vk" else "telegram.source.hint.yandex"
+        hint_key = (
+            "telegram.source.hint.vk"
+            if source == "vk"
+            else "telegram.source.hint.yandex"
+        )
         self.lbl_source_hint.configure(text=self.i18n.t(hint_key))
 
     def save_settings(self):
         token = self.entry_token.get()
         chat_id = self.entry_chat_id.get()
         success, msg = self.controller.save_tg_settings(token, chat_id)
-        self.controller.on_log(msg) 
+        self.controller.on_log(msg)
 
     def on_vk_login(self):
-        self.lbl_vk_status.configure(text=self.i18n.t("telegram.vk.status.pending"), text_color=self.theme["muted"])
+        self.lbl_vk_status.configure(
+            text=self.i18n.t("telegram.vk.status.pending"),
+            text_color=self.theme["muted"],
+        )
         self.controller.start_browser_and_login()
 
     def on_vk_scan(self):
         self.controller.scan_playlists()
 
     def on_yandex_scan(self):
-        self.lbl_ym_status.configure(text=self.i18n.t("telegram.ym.status.pending"), text_color=self.theme["muted"])
+        self.lbl_ym_status.configure(
+            text=self.i18n.t("telegram.ym.status.pending"),
+            text_color=self.theme["muted"],
+        )
         self.controller.scan_yandex_chart()
 
     def set_vk_connected_status(self, connected):
         self._vk_connected = connected
         if connected:
-            self.lbl_vk_status.configure(text=self.i18n.t("telegram.vk.status.connected"), text_color=self.theme["success"])
+            self.lbl_vk_status.configure(
+                text=self.i18n.t("telegram.vk.status.connected"),
+                text_color=self.theme["success"],
+            )
         else:
-            self.lbl_vk_status.configure(text=self.i18n.t("telegram.vk.status.idle"), text_color=self.theme["muted"])
+            self.lbl_vk_status.configure(
+                text=self.i18n.t("telegram.vk.status.idle"),
+                text_color=self.theme["muted"],
+            )
 
     def set_yandex_collection_status(self, ready):
         self._yandex_ready = ready
         if ready:
-            self.lbl_ym_status.configure(text=self.i18n.t("telegram.ym.status.ready"), text_color=self.theme["success"])
+            self.lbl_ym_status.configure(
+                text=self.i18n.t("telegram.ym.status.ready"),
+                text_color=self.theme["success"],
+            )
         else:
-            self.lbl_ym_status.configure(text=self.i18n.t("telegram.ym.status.idle"), text_color=self.theme["muted"])
+            self.lbl_ym_status.configure(
+                text=self.i18n.t("telegram.ym.status.idle"),
+                text_color=self.theme["muted"],
+            )
 
     def test_connection(self):
         success, msg = self.controller.test_tg_connection()
@@ -407,7 +442,11 @@ class TelegramView(ctk.CTkFrame):
 
         self.lbl_source_section.configure(text=self.i18n.t("telegram.source.section"))
         self.seg_source.configure(values=source_values)
-        self.seg_source.set(self.source_code_to_label.get(selected_source, self.source_code_to_label["vk"]))
+        self.seg_source.set(
+            self.source_code_to_label.get(
+                selected_source, self.source_code_to_label["vk"]
+            )
+        )
         self._apply_source_hint()
 
         self.lbl_guide_title.configure(text=self.i18n.t("telegram.guide.title"))
@@ -433,5 +472,9 @@ class TelegramView(ctk.CTkFrame):
 
         self.lbl_strategy.configure(text=self.i18n.t("telegram.strategy"))
         self.combo_strategy.configure(values=new_values)
-        self.combo_strategy.set(self.strategy_code_to_label.get(selected_code, self.strategy_code_to_label["download_only"]))
+        self.combo_strategy.set(
+            self.strategy_code_to_label.get(
+                selected_code, self.strategy_code_to_label["download_only"]
+            )
+        )
         self.lab_help.configure(text=self.i18n.t("telegram.strategy.help"))

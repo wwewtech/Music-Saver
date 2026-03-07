@@ -16,7 +16,9 @@ class VKDriverFactory:
     @staticmethod
     def create_driver():
         logger.info(f"Создание Selenium Driver. Путь к профилю: {PROFILE_DIR}")
-        selenium_cache_dir = os.path.join(os.path.dirname(PROFILE_DIR), "selenium_cache")
+        selenium_cache_dir = os.path.join(
+            os.path.dirname(PROFILE_DIR), "selenium_cache"
+        )
         os.makedirs(selenium_cache_dir, exist_ok=True)
         os.environ.setdefault("SE_CACHE_PATH", selenium_cache_dir)
         options = Options()
@@ -38,11 +40,17 @@ class VKDriverFactory:
             if os.path.exists(CHROMEDRIVER_PATH):
                 service = Service(CHROMEDRIVER_PATH)
                 driver = webdriver.Chrome(service=service, options=options)
-                logger.info("Selenium Chrome Driver успешно запущен (локальный chromedriver.exe).")
+                logger.info(
+                    "Selenium Chrome Driver успешно запущен (локальный chromedriver.exe)."
+                )
             else:
-                logger.warning("Локальный chromedriver.exe не найден. Переход на Selenium Manager.")
+                logger.warning(
+                    "Локальный chromedriver.exe не найден. Переход на Selenium Manager."
+                )
                 driver = webdriver.Chrome(options=options)
-                logger.info("Selenium Chrome Driver успешно запущен через Selenium Manager.")
+                logger.info(
+                    "Selenium Chrome Driver успешно запущен через Selenium Manager."
+                )
         except SessionNotCreatedException as e:
             logger.warning(
                 "Локальный ChromeDriver не подходит к версии Chrome. "
@@ -50,9 +58,13 @@ class VKDriverFactory:
             )
             try:
                 driver = webdriver.Chrome(options=options)
-                logger.info("Selenium Chrome Driver успешно запущен через Selenium Manager после fallback.")
+                logger.info(
+                    "Selenium Chrome Driver успешно запущен через Selenium Manager после fallback."
+                )
             except Exception as fallback_error:
-                logger.error(f"Ошибка при создании Chrome Driver через Selenium Manager: {fallback_error}")
+                logger.error(
+                    f"Ошибка при создании Chrome Driver через Selenium Manager: {fallback_error}"
+                )
                 raise fallback_error
         except Exception as e:
             logger.error(f"Ошибка при создании Chrome Driver: {e}")

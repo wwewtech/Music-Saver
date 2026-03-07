@@ -6,7 +6,13 @@ from queue import Queue, Empty
 
 from src.utils.logger import logger
 from src.ui.i18n import I18n
-from src.ui.design_system import get_theme, ui_font, button_style, entry_style, checkbox_style
+from src.ui.design_system import (
+    get_theme,
+    ui_font,
+    button_style,
+    entry_style,
+    checkbox_style,
+)
 
 
 class WizardStep(ctk.CTkFrame):
@@ -86,7 +92,9 @@ class WizardStep(ctk.CTkFrame):
             state="disabled",
             corner_radius=10,
             height=42,
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=13, weight="bold"
+            ),
             **button_style(self.theme, "primary"),
         )
         self.btn_next.pack(side="right")
@@ -148,7 +156,9 @@ class VKAuthStep(WizardStep):
             command=self.do_login,
             height=42,
             corner_radius=10,
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=13, weight="bold"
+            ),
             **button_style(self.theme, "primary"),
         )
         self.btn_login.pack(anchor="w", pady=(10, 16))
@@ -168,18 +178,24 @@ class VKAuthStep(WizardStep):
         self.wizard.controller.start_browser_and_login()
 
     def on_success(self):
-        self.lbl_status.configure(text=self.i18n.t("wizard.vk.success"), text_color=self.theme["success"])
+        self.lbl_status.configure(
+            text=self.i18n.t("wizard.vk.success"), text_color=self.theme["success"]
+        )
         self.enable_next()
 
     def apply_language(self):
         super().apply_language()
         self.btn_login.configure(text=self.i18n.t("wizard.vk.login"))
         if self.btn_login.cget("state") == "normal":
-            self.lbl_status.configure(text=self.i18n.t("wizard.vk.wait"), text_color=self.theme["muted"])
+            self.lbl_status.configure(
+                text=self.i18n.t("wizard.vk.wait"), text_color=self.theme["muted"]
+            )
 
     def reset_state(self):
         self.btn_login.configure(state="normal")
-        self.lbl_status.configure(text=self.i18n.t("wizard.vk.wait"), text_color=self.theme["muted"])
+        self.lbl_status.configure(
+            text=self.i18n.t("wizard.vk.wait"), text_color=self.theme["muted"]
+        )
         self.btn_next.configure(state="disabled", text=self.i18n.t("wizard.next"))
 
 
@@ -204,7 +220,9 @@ class TelegramStep(WizardStep):
         self.lbl_mode = ctk.CTkLabel(
             self.step_scroll,
             text=self.i18n.t("wizard.tg.mode"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=13, weight="bold"
+            ),
             text_color=self.theme["text"],
             anchor="w",
         )
@@ -233,8 +251,16 @@ class TelegramStep(WizardStep):
         )
         self.seg_mode.pack(fill="x", pady=(0, 8))
 
-        initial_mode = self.wizard.controller.get_processing_strategy() if hasattr(self.wizard.controller, "get_processing_strategy") else "download_only"
-        self.seg_mode.set(self.mode_code_to_label.get(initial_mode, self.mode_code_to_label["download_only"]))
+        initial_mode = (
+            self.wizard.controller.get_processing_strategy()
+            if hasattr(self.wizard.controller, "get_processing_strategy")
+            else "download_only"
+        )
+        self.seg_mode.set(
+            self.mode_code_to_label.get(
+                initial_mode, self.mode_code_to_label["download_only"]
+            )
+        )
 
         self.lbl_mode_state = ctk.CTkLabel(
             self.step_scroll,
@@ -310,7 +336,9 @@ class TelegramStep(WizardStep):
         )
         self.btn_skip.pack(side="left")
 
-        self.entry_chat_id.bind("<KeyRelease>", lambda _event: self._sync_chat_id_check())
+        self.entry_chat_id.bind(
+            "<KeyRelease>", lambda _event: self._sync_chat_id_check()
+        )
         self._apply_mode_state()
 
     def _build_mode_values(self):
@@ -343,10 +371,16 @@ class TelegramStep(WizardStep):
         self.btn_test.configure(state=state)
 
         if needs_tg:
-            self.lbl_mode_state.configure(text=self.i18n.t("wizard.tg.mode.required"), text_color=self.theme["warning"])
+            self.lbl_mode_state.configure(
+                text=self.i18n.t("wizard.tg.mode.required"),
+                text_color=self.theme["warning"],
+            )
             self.btn_next.configure(state="disabled", text=self.i18n.t("wizard.next"))
         else:
-            self.lbl_mode_state.configure(text=self.i18n.t("wizard.tg.mode.local"), text_color=self.theme["success"])
+            self.lbl_mode_state.configure(
+                text=self.i18n.t("wizard.tg.mode.local"),
+                text_color=self.theme["success"],
+            )
             self.enable_next()
             self.btn_next.configure(text=self.i18n.t("wizard.next"))
 
@@ -367,7 +401,9 @@ class TelegramStep(WizardStep):
         self.lbl_help_title = ctk.CTkLabel(
             self.help_panel,
             text=self.i18n.t("wizard.tg.help.title"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=14, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=14, weight="bold"
+            ),
             text_color=self.theme["text"],
             anchor="w",
         )
@@ -410,26 +446,42 @@ class TelegramStep(WizardStep):
         self.stage1_title, self.stage1_steps = self._create_stage_card(
             self.help_panel,
             "wizard.tg.stage1",
-            ["wizard.tg.stage1.step1", "wizard.tg.stage1.step2", "wizard.tg.stage1.step3"],
+            [
+                "wizard.tg.stage1.step1",
+                "wizard.tg.stage1.step2",
+                "wizard.tg.stage1.step3",
+            ],
         )
         self.stage2_title, self.stage2_steps = self._create_stage_card(
             self.help_panel,
             "wizard.tg.stage2",
-            ["wizard.tg.stage2.step1", "wizard.tg.stage2.step2", "wizard.tg.stage2.step3"],
+            [
+                "wizard.tg.stage2.step1",
+                "wizard.tg.stage2.step2",
+                "wizard.tg.stage2.step3",
+            ],
         )
         self.stage3_title, self.stage3_steps = self._create_stage_card(
             self.help_panel,
             "wizard.tg.stage3",
-            ["wizard.tg.stage3.step1", "wizard.tg.stage3.step2", "wizard.tg.stage3.step3"],
+            [
+                "wizard.tg.stage3.step1",
+                "wizard.tg.stage3.step2",
+                "wizard.tg.stage3.step3",
+            ],
         )
 
-        checklist = ctk.CTkFrame(self.help_panel, fg_color=self.theme["surface_alt"], corner_radius=10)
+        checklist = ctk.CTkFrame(
+            self.help_panel, fg_color=self.theme["surface_alt"], corner_radius=10
+        )
         checklist.pack(fill="x", padx=12, pady=(4, 12))
 
         self.lbl_checklist = ctk.CTkLabel(
             checklist,
             text=self.i18n.t("wizard.tg.checklist"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=12, weight="bold"
+            ),
             text_color=self.theme["muted"],
             anchor="w",
         )
@@ -440,19 +492,45 @@ class TelegramStep(WizardStep):
         self.chk_admin_var = ctk.BooleanVar(value=False)
         self.chk_chat_var = ctk.BooleanVar(value=False)
 
-        self.chk_bot = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.bot"), variable=self.chk_bot_var, command=self._update_help_progress, **checkbox_style(self.theme))
+        self.chk_bot = ctk.CTkCheckBox(
+            checklist,
+            text=self.i18n.t("wizard.tg.check.bot"),
+            variable=self.chk_bot_var,
+            command=self._update_help_progress,
+            **checkbox_style(self.theme),
+        )
         self.chk_bot.pack(anchor="w", padx=10, pady=2)
-        self.chk_group = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.group"), variable=self.chk_group_var, command=self._update_help_progress, **checkbox_style(self.theme))
+        self.chk_group = ctk.CTkCheckBox(
+            checklist,
+            text=self.i18n.t("wizard.tg.check.group"),
+            variable=self.chk_group_var,
+            command=self._update_help_progress,
+            **checkbox_style(self.theme),
+        )
         self.chk_group.pack(anchor="w", padx=10, pady=2)
-        self.chk_admin = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.admin"), variable=self.chk_admin_var, command=self._update_help_progress, **checkbox_style(self.theme))
+        self.chk_admin = ctk.CTkCheckBox(
+            checklist,
+            text=self.i18n.t("wizard.tg.check.admin"),
+            variable=self.chk_admin_var,
+            command=self._update_help_progress,
+            **checkbox_style(self.theme),
+        )
         self.chk_admin.pack(anchor="w", padx=10, pady=2)
-        self.chk_chat = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.chat"), variable=self.chk_chat_var, command=self._update_help_progress, **checkbox_style(self.theme))
+        self.chk_chat = ctk.CTkCheckBox(
+            checklist,
+            text=self.i18n.t("wizard.tg.check.chat"),
+            variable=self.chk_chat_var,
+            command=self._update_help_progress,
+            **checkbox_style(self.theme),
+        )
         self.chk_chat.pack(anchor="w", padx=10, pady=2)
 
         self.lbl_progress = ctk.CTkLabel(
             checklist,
             text="",
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=12, weight="bold"
+            ),
             text_color=self.theme["accent"],
             anchor="w",
         )
@@ -460,13 +538,17 @@ class TelegramStep(WizardStep):
         self._update_help_progress()
 
     def _create_stage_card(self, parent, title_key, step_keys):
-        card = ctk.CTkFrame(parent, fg_color=self.theme["surface_alt"], corner_radius=10)
+        card = ctk.CTkFrame(
+            parent, fg_color=self.theme["surface_alt"], corner_radius=10
+        )
         card.pack(fill="x", padx=12, pady=(0, 8))
 
         title = ctk.CTkLabel(
             card,
             text=self.i18n.t(title_key),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12, weight="bold"),
+            font=ctk.CTkFont(
+                family=self.theme["font_fallback"], size=12, weight="bold"
+            ),
             text_color=self.theme["text"],
             anchor="w",
         )
@@ -500,13 +582,17 @@ class TelegramStep(WizardStep):
         self._update_help_progress()
 
     def _update_help_progress(self):
-        done = sum([
-            bool(self.chk_bot_var.get()),
-            bool(self.chk_group_var.get()),
-            bool(self.chk_admin_var.get()),
-            bool(self.chk_chat_var.get()),
-        ])
-        self.lbl_progress.configure(text=self.i18n.t("wizard.tg.progress", done=done, total=4))
+        done = sum(
+            [
+                bool(self.chk_bot_var.get()),
+                bool(self.chk_group_var.get()),
+                bool(self.chk_admin_var.get()),
+                bool(self.chk_chat_var.get()),
+            ]
+        )
+        self.lbl_progress.configure(
+            text=self.i18n.t("wizard.tg.progress", done=done, total=4)
+        )
 
     def toggle_help(self):
         self.help_visible = not self.help_visible
@@ -548,12 +634,22 @@ class TelegramStep(WizardStep):
         self.lbl_mode.configure(text=self.i18n.t("wizard.tg.mode"))
         self.lbl_mode_hint.configure(text=self.i18n.t("wizard.tg.mode.hint"))
         self.seg_mode.configure(values=mode_values)
-        self.seg_mode.set(self.mode_code_to_label.get(selected_mode, self.mode_code_to_label["download_only"]))
+        self.seg_mode.set(
+            self.mode_code_to_label.get(
+                selected_mode, self.mode_code_to_label["download_only"]
+            )
+        )
         self.entry_token.configure(placeholder_text=self.i18n.t("wizard.tg.token"))
         self.entry_chat_id.configure(placeholder_text=self.i18n.t("wizard.tg.chat"))
         self.lbl_tip.configure(text=self.i18n.t("wizard.tg.tip"))
         self.btn_test.configure(text=self.i18n.t("telegram.test"))
-        self.btn_help.configure(text=self.i18n.t("wizard.tg.help.hide") if self.help_visible else self.i18n.t("wizard.tg.help.show"))
+        self.btn_help.configure(
+            text=(
+                self.i18n.t("wizard.tg.help.hide")
+                if self.help_visible
+                else self.i18n.t("wizard.tg.help.show")
+            )
+        )
         self.lbl_help_title.configure(text=self.i18n.t("wizard.tg.help.title"))
         self.lbl_help_subtitle.configure(text=self.i18n.t("wizard.tg.help.subtitle"))
         self.btn_open_botfather.configure(text=self.i18n.t("wizard.tg.open.botfather"))
@@ -575,8 +671,16 @@ class TelegramStep(WizardStep):
         self._apply_mode_state()
 
     def reset_state(self):
-        current_mode = self.wizard.controller.get_processing_strategy() if hasattr(self.wizard.controller, "get_processing_strategy") else "download_only"
-        self.seg_mode.set(self.mode_code_to_label.get(current_mode, self.mode_code_to_label["download_only"]))
+        current_mode = (
+            self.wizard.controller.get_processing_strategy()
+            if hasattr(self.wizard.controller, "get_processing_strategy")
+            else "download_only"
+        )
+        self.seg_mode.set(
+            self.mode_code_to_label.get(
+                current_mode, self.mode_code_to_label["download_only"]
+            )
+        )
         self._apply_mode_state()
         self.help_visible = False
         self.help_panel.pack_forget()
@@ -642,7 +746,11 @@ class SetupWizard(ctk.CTk):
         super().__init__()
         self.controller = controller
         self.theme = get_theme()
-        self.i18n = I18n(self.controller.get_language() if hasattr(self.controller, "get_language") else "ru")
+        self.i18n = I18n(
+            self.controller.get_language()
+            if hasattr(self.controller, "get_language")
+            else "ru"
+        )
 
         self.title(self.i18n.t("wizard.title"))
         self.geometry("760x560")
@@ -660,7 +768,9 @@ class SetupWizard(ctk.CTk):
         self._after_ids = set()
         self._is_closing = False
         self.controller.on_log = lambda msg: self._ui_events.put(("log", msg))
-        self.controller.on_login_success = lambda: self._ui_events.put(("login_success", None))
+        self.controller.on_login_success = lambda: self._ui_events.put(
+            ("login_success", None)
+        )
 
         self.step = 1
 
@@ -684,7 +794,9 @@ class SetupWizard(ctk.CTk):
         )
         self.lbl_progress.pack(side="left")
 
-        self.lang_switch = ctk.CTkFrame(top_row, fg_color=self.theme["surface"], corner_radius=10)
+        self.lang_switch = ctk.CTkFrame(
+            top_row, fg_color=self.theme["surface"], corner_radius=10
+        )
         self.lang_switch.pack(side="right")
 
         self.btn_lang_ru = ctk.CTkButton(
@@ -762,7 +874,9 @@ class SetupWizard(ctk.CTk):
 
     def _render_progress(self):
         self.lbl_progress.configure(
-            text=self.i18n.t("wizard.progress", current=self.step, total=len(self.steps_map))
+            text=self.i18n.t(
+                "wizard.progress", current=self.step, total=len(self.steps_map)
+            )
         )
 
     def log_handler(self, msg):

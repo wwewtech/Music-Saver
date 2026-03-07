@@ -4,13 +4,16 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from src.utils.logger import logger
 
+
 class AuthService:
     def __init__(self, driver):
         self.driver = driver
         self.user_id = None
 
     def wait_for_login(self, timeout=600):
-        logger.debug(f"AuthService: переходим на vk.com и ждем логина (timeout={timeout}s)")
+        logger.debug(
+            f"AuthService: переходим на vk.com и ждем логина (timeout={timeout}s)"
+        )
         self.driver.get("https://vk.com")
         try:
             WebDriverWait(self.driver, timeout).until(
