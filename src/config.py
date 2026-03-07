@@ -7,7 +7,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 if getattr(sys, "frozen", False):
     APP_DIR = os.path.dirname(sys.executable)
-    RESOURCE_DIR = getattr(sys, "_MEIPASS", APP_DIR)
+    if hasattr(sys, "_MEIPASS"):
+        RESOURCE_DIR = sys._MEIPASS
+    else:
+        # PyInstaller 6+ default onedir bundle is in _internal
+        internal_dir = os.path.join(APP_DIR, "_internal")
+        if os.path.exists(internal_dir):
+            RESOURCE_DIR = internal_dir
+        else:
+            RESOURCE_DIR = APP_DIR
 else:
     APP_DIR = BASE_DIR
     RESOURCE_DIR = BASE_DIR

@@ -29,6 +29,9 @@ from src.utils.logger import logger
 
 
 class AppController:
+    STATS_CACHE_TTL_SEC = 2.0
+    STORAGE_SCAN_INTERVAL_SEC = 60.0
+
     def __init__(self):
         logger.debug("Инициализация AppController...")
         self._db_manager = DBManager()
@@ -50,6 +53,10 @@ class AppController:
         self.is_running = False
         self._stop_event = threading.Event()
         self.user_id = None
+        self._stats_cache = None
+        self._stats_cache_ts = 0.0
+        self._storage_cache_mb = 0.0
+        self._storage_cache_ts = 0.0
 
         # Thread pool for background tasks (max 1 worker — sequential execution)
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vkms")
@@ -156,26 +163,36 @@ class AppController:
         return self.settings_manager.get_settings()
 
     def get_dashboard_stats(self):
+        now = time.monotonic()
+        if (
+            self._stats_cache is not None
+            and now - self._stats_cache_ts < self.STATS_CACHE_TTL_SEC
+        ):
+            return dict(self._stats_cache)
+
         logger.debug("Запрос статистики для дашборда...")
         pl_count = self.playlist_repo.get_count()
         track_stats = self.track_repo.get_stats()
-        download_dir = self.get_download_dir()
+        storage_size_mb = self._storage_cache_mb
 
-        # Calculate storage used
-        storage_size_mb = 0
-        try:
-            total_size = 0
-            if os.path.exists(download_dir):
-                for dirpath, dirnames, filenames in os.walk(download_dir):
-                    for f in filenames:
-                        fp = os.path.join(dirpath, f)
-                        if not os.path.islink(fp):
-                            total_size += os.path.getsize(fp)
-                storage_size_mb = round(total_size / (1024 * 1024), 2)
-            else:
-                logger.debug(f"Папка загрузок {download_dir} не найдена.")
-        except Exception as e:
-            logger.error(f"Error calculating storage: {e}")
+        # Recalculate storage less frequently: this is the most expensive part.
+        if now - self._storage_cache_ts >= self.STORAGE_SCAN_INTERVAL_SEC:
+            download_dir = self.get_download_dir()
+            try:
+                total_size = 0
+                if os.path.exists(download_dir):
+                    for dirpath, dirnames, filenames in os.walk(download_dir):
+                        for f in filenames:
+                            fp = os.path.join(dirpath, f)
+                            if not os.path.islink(fp):
+                                total_size += os.path.getsize(fp)
+                    storage_size_mb = round(total_size / (1024 * 1024), 2)
+                else:
+                    logger.debug(f"Папка загрузок {download_dir} не найдена.")
+            except Exception as e:
+                logger.error(f"Error calculating storage: {e}")
+            self._storage_cache_mb = storage_size_mb
+            self._storage_cache_ts = now
 
         stats = {
             "playlists": pl_count,
@@ -184,6 +201,8 @@ class AppController:
             "tracks_uploaded": track_stats["uploaded"],
             "storage_mb": storage_size_mb,
         }
+        self._stats_cache = dict(stats)
+        self._stats_cache_ts = now
         logger.debug(f"Статистика собрана: {stats}")
         return stats
 
@@ -281,7 +300,7 @@ class AppController:
             self.set_preferred_source("vk")
             self.on_log("Источник переключен на VK.")
 
-            self.on_log("Сканирование плейлистов...")
+            self.on_log("Сканирование VK-плейлистов и подписок...")
             try:
                 parser = ParserService(self.driver, self.user_id)
                 pl_dicts = parser.scan_playlists()
@@ -289,11 +308,12 @@ class AppController:
                 result_objects = []
                 for item in pl_dicts:
                     pl = Playlist(id=item["id"], title=item["title"], url=item["url"])
-                    self.playlist_repo.save(pl)
                     result_objects.append(pl)
 
+                self.playlist_repo.sync_vk_playlists(result_objects)
+
                 all_playlists = self.playlist_repo.get_all()
-                msg = f"Найдено VK-плейлистов: {len(result_objects)}"
+                msg = f"VK-плейлисты синхронизированы: {len(result_objects)}"
                 self.on_log(msg)
                 logger.info(msg)
                 self.on_scan_complete(all_playlists)

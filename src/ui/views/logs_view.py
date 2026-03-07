@@ -66,8 +66,14 @@ class LogsView(ctk.CTkFrame):
         self.textbox.configure(state="disabled")
 
     def append(self, text):
+        self.append_many([text])
+
+    def append_many(self, lines):
+        if not lines:
+            return
         self.textbox.configure(state="normal")
-        ts = datetime.datetime.now().strftime("%H:%M:%S")
-        self.textbox.insert("end", f"[{ts}] {text}\n")
+        for text in lines:
+            ts = datetime.datetime.now().strftime("%H:%M:%S")
+            self.textbox.insert("end", f"[{ts}] {text}\n")
         self.textbox.see("end")
         self.textbox.configure(state="disabled")

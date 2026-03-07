@@ -9,6 +9,7 @@ class DashboardView(ctk.CTkFrame):
         self.i18n = i18n
         self.theme = theme
         self.cards = {}
+        self._last_stats = None
         self.setup_ui()
 
     def setup_ui(self):
@@ -105,7 +106,14 @@ class DashboardView(ctk.CTkFrame):
 
     def update_stats(self):
         stats = self.controller.get_dashboard_stats()
+        self.apply_stats(stats)
+
+    def apply_stats(self, stats):
+        if stats == self._last_stats:
+            return
+
         self.card_total.configure(text=str(stats.get("playlists", 0)))
         self.card_downloaded.configure(text=str(stats.get("tracks_downloaded", 0)))
         self.card_uploaded.configure(text=str(stats.get("tracks_uploaded", 0)))
         self.card_storage.configure(text=f"{stats.get('storage_mb', 0)} MB")
+        self._last_stats = dict(stats)

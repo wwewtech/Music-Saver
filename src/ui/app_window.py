@@ -1,6 +1,10 @@
 import customtkinter as ctk
 from tkinter import TclError
 from queue import Queue, Empty
+from concurrent.futures import ThreadPoolExecutor
+import time
+import os
+from src.config import RESOURCE_DIR
 from src.ui.views.dashboard_view import DashboardView
 from src.ui.views.downloader_view import DownloaderView
 from src.ui.views.telegram_view import TelegramView
@@ -10,6 +14,12 @@ from src.ui.design_system import get_theme, ui_font, button_style
 
 
 class AppWindow(ctk.CTk):
+    STATS_POLL_INTERVAL_MS = 30000
+    UI_EVENTS_POLL_MS = 250
+    MAX_UI_EVENTS_PER_TICK = 50
+    RESIZE_SETTLE_MS = 150
+    PENDING_LOGS_MAX = 2000
+
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
@@ -25,6 +35,12 @@ class AppWindow(ctk.CTk):
         self._ui_events = Queue()
         self._after_ids = set()
         self._is_closing = False
+        self._stats_fetch_in_progress = False
+        self._stats_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ui-stats")
+        self._pending_logs = []
+        self._resize_frozen = False
+        self._resize_restore_id = None
+        self._last_resize_ts = 0.0
         self.current_view = "dashboard"
         self.view_titles = {
             "dashboard": ("dashboard.title", "dashboard.subtitle"),
@@ -37,6 +53,14 @@ class AppWindow(ctk.CTk):
         self.geometry("1240x820")
         self.minsize(1120, 760)
         self.configure(fg_color=self.theme["bg"])
+
+        # Установка иконки приложения
+        icon_path = os.path.join(RESOURCE_DIR, "resources", "VKMusicSaver.ico")
+        if os.path.exists(icon_path):
+            try:
+                self.iconbitmap(icon_path)
+            except Exception as e:
+                print(f"Failed to set icon: {e}")
 
         # Configure Controller Callbacks
         self.controller.on_log = lambda msg: self._ui_events.put(("log", msg))
@@ -62,6 +86,7 @@ class AppWindow(ctk.CTk):
 
         self.setup_sidebar()
         self.setup_views()
+        self.bind("<Configure>", self._on_window_configure)
 
         # Start Clock/Stats Loop
         self.update_stats_loop()
@@ -311,8 +336,85 @@ class AppWindow(ctk.CTk):
             target_view.on_show()
         target_view.grid(row=0, column=0, sticky="nsew")
 
+        if name == "logs":
+            self._flush_pending_logs()
+
+        if name == "dashboard" and self.views.get("dashboard"):
+            self._request_dashboard_stats_async()
+
+    def _request_dashboard_stats_async(self):
+        if (
+            self._is_closing
+            or not self._window_alive()
+            or self.current_view != "dashboard"
+            or self._stats_fetch_in_progress
+        ):
+            return
+
+        self._stats_fetch_in_progress = True
+
+        def _worker():
+            try:
+                stats = self.controller.get_dashboard_stats()
+                self._ui_events.put(("dashboard_stats", stats))
+            except Exception as exc:
+                self._ui_events.put(("log", f"Ошибка обновления статистики: {exc}"))
+            finally:
+                self._ui_events.put(("dashboard_stats_done", None))
+
+        self._stats_executor.submit(_worker)
+
     def log_message(self, msg):
-        self.views["logs"].append(msg)
+        if self.current_view == "logs":
+            self.views["logs"].append(msg)
+            return
+
+        self._pending_logs.append(msg)
+        if len(self._pending_logs) > self.PENDING_LOGS_MAX:
+            self._pending_logs = self._pending_logs[-self.PENDING_LOGS_MAX :]
+
+    def _flush_pending_logs(self):
+        if not self._pending_logs:
+            return
+        self.views["logs"].append_many(self._pending_logs)
+        self._pending_logs.clear()
+
+    def _on_window_configure(self, event):
+        # Only react to the root window resize, ignore child widget Configure events
+        if event.widget is not self:
+            return
+
+        self._last_resize_ts = time.monotonic()
+
+        # Freeze: remove the heavy view container from layout so CTk
+        # doesn't redraw dozens of canvas widgets on every pixel of drag
+        if not self._resize_frozen:
+            self._resize_frozen = True
+            self.view_container.grid_remove()
+
+        # Cancel the previous scheduled restore
+        if self._resize_restore_id is not None:
+            try:
+                self.after_cancel(self._resize_restore_id)
+            except TclError:
+                pass
+            self._resize_restore_id = None
+
+        # Schedule restore after resize activity settles
+        try:
+            self._resize_restore_id = self.after(
+                self.RESIZE_SETTLE_MS, self._restore_after_resize
+            )
+        except TclError:
+            pass
+
+    def _restore_after_resize(self):
+        """Re-show the view container once the user stops dragging."""
+        self._resize_restore_id = None
+        self._resize_frozen = False
+        if self._is_closing or not self._window_alive():
+            return
+        self.view_container.grid(row=1, column=0, sticky="nsew")
 
     def on_scan_complete(self, playlists):
         self.views["vk"].update_playlists(playlists)
@@ -381,17 +483,18 @@ class AppWindow(ctk.CTk):
         if self._is_closing or not self._window_alive():
             return
 
-        # Update dashboard every 5s
-        if self.views.get("dashboard"):
-            try:
-                self.views["dashboard"].update_stats()
-            except Exception:
-                pass
-        self._schedule_after(5000, self.update_stats_loop)
+        # Update dashboard only when visible to keep UI responsive
+        if self.current_view == "dashboard" and self.views.get("dashboard"):
+            self._request_dashboard_stats_async()
+        self._schedule_after(self.STATS_POLL_INTERVAL_MS, self.update_stats_loop)
 
     def on_close(self):
         self._is_closing = True
         self._cancel_after_callbacks()
+        try:
+            self._stats_executor.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass
         try:
             self.controller.close_app()
         except Exception:
@@ -404,6 +507,7 @@ class AppWindow(ctk.CTk):
             return
 
         try:
+            processed = 0
             while True:
                 event, payload = self._ui_events.get_nowait()
                 if event == "log":
@@ -419,7 +523,18 @@ class AppWindow(ctk.CTk):
                 elif event == "preferred_source_changed":
                     if "vk" in self.views and hasattr(self.views["vk"], "set_source"):
                         self.views["vk"].set_source(payload)
+                elif event == "dashboard_stats":
+                    if "dashboard" in self.views and hasattr(
+                        self.views["dashboard"], "apply_stats"
+                    ):
+                        self.views["dashboard"].apply_stats(payload)
+                elif event == "dashboard_stats_done":
+                    self._stats_fetch_in_progress = False
+
+                processed += 1
+                if processed >= self.MAX_UI_EVENTS_PER_TICK:
+                    break
         except Empty:
             pass
 
-        self._schedule_after(120, self.process_ui_events)
+        self._schedule_after(self.UI_EVENTS_POLL_MS, self.process_ui_events)

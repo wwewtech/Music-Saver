@@ -95,6 +95,17 @@ class DownloaderView(ctk.CTkFrame):
         )
         self.btn_scan_yandex.pack(side="left", padx=8, pady=12)
 
+        self.btn_scan_vk = ctk.CTkButton(
+            ctrl_frame,
+            text=self.i18n.t("downloader.scan.vk"),
+            command=self.controller.scan_playlists,
+            font=ui_font(self.theme, 13, "bold"),
+            corner_radius=10,
+            height=42,
+            **button_style(self.theme, "secondary"),
+        )
+        self.btn_scan_vk.pack(side="left", padx=8, pady=12)
+
         self.lbl_status = ctk.CTkLabel(
             ctrl_frame,
             text=self.i18n.t("downloader.status.idle"),
@@ -238,6 +249,9 @@ class DownloaderView(ctk.CTkFrame):
         if hasattr(self, "btn_empty_scan_ym"):
             self.btn_empty_scan_ym.destroy()
             del self.btn_empty_scan_ym
+        if hasattr(self, "btn_empty_scan_vk"):
+            self.btn_empty_scan_vk.destroy()
+            del self.btn_empty_scan_vk
 
         if not visible_playlists:
             self.lbl_empty = ctk.CTkLabel(
@@ -259,6 +273,14 @@ class DownloaderView(ctk.CTkFrame):
                     **button_style(self.theme, "secondary"),
                 )
                 self.btn_empty_scan_ym.pack(pady=(0, 10))
+            else:
+                self.btn_empty_scan_vk = ctk.CTkButton(
+                    self.scroll,
+                    text=self.i18n.t("downloader.scan.vk"),
+                    command=self.controller.scan_playlists,
+                    **button_style(self.theme, "secondary"),
+                )
+                self.btn_empty_scan_vk.pack(pady=(0, 10))
             return
 
         for pl in visible_playlists:
@@ -330,6 +352,7 @@ class DownloaderView(ctk.CTkFrame):
                 else self.i18n.t("downloader.ym.hint")
             )
         )
+        self.btn_scan_vk.configure(state="normal" if is_vk else "disabled")
         self.btn_scan_yandex.configure(state="disabled" if is_vk else "normal")
         self.ym_url_entry.configure(state="disabled" if is_vk else "normal")
         self.btn_ym_scan_url.configure(state="disabled" if is_vk else "normal")
@@ -396,6 +419,7 @@ class DownloaderView(ctk.CTkFrame):
                 else self.i18n.t("downloader.ym.hint")
             )
         )
+        self.btn_scan_vk.configure(text=self.i18n.t("downloader.scan.vk"))
         self.btn_scan_yandex.configure(text=self.i18n.t("downloader.scan.yandex"))
         self.set_connected_status(self.is_connected)
         self.lbl_options.configure(text=self.i18n.t("downloader.options"))
@@ -419,4 +443,6 @@ class DownloaderView(ctk.CTkFrame):
             )
         if hasattr(self, "btn_empty_scan_ym"):
             self.btn_empty_scan_ym.configure(text=self.i18n.t("downloader.scan.yandex"))
+        if hasattr(self, "btn_empty_scan_vk"):
+            self.btn_empty_scan_vk.configure(text=self.i18n.t("downloader.scan.vk"))
         self._update_source_controls()

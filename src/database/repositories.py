@@ -18,6 +18,89 @@ class PlaylistRepository:
         except Exception as e:
             print(f"DB Error (PlaylistRepository.save): {e}")
 
+    def upsert(self, playlist: Playlist):
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO playlists (id, title, url, status)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    url = excluded.url,
+                    status = excluded.status
+                """,
+                (playlist.id, playlist.title, playlist.url, playlist.status),
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"DB Error (PlaylistRepository.upsert): {e}")
+
+    def sync_vk_playlists(self, playlists):
+        cursor = self.conn.cursor()
+        try:
+            vk_ids = [pl.id for pl in playlists]
+
+            if vk_ids:
+                placeholders = ",".join("?" * len(vk_ids))
+                cursor.execute(
+                    f"""
+                    DELETE FROM tracks
+                    WHERE playlist_id IN (
+                        SELECT id
+                        FROM playlists
+                        WHERE id NOT LIKE 'ym:%'
+                          AND (url IS NULL OR url NOT LIKE '%music.yandex.ru%')
+                          AND id NOT IN ({placeholders})
+                    )
+                    """,
+                    vk_ids,
+                )
+                cursor.execute(
+                    f"""
+                    DELETE FROM playlists
+                    WHERE id NOT LIKE 'ym:%'
+                      AND (url IS NULL OR url NOT LIKE '%music.yandex.ru%')
+                      AND id NOT IN ({placeholders})
+                    """,
+                    vk_ids,
+                )
+            else:
+                cursor.execute(
+                    """
+                    DELETE FROM tracks
+                    WHERE playlist_id IN (
+                        SELECT id
+                        FROM playlists
+                        WHERE id NOT LIKE 'ym:%'
+                          AND (url IS NULL OR url NOT LIKE '%music.yandex.ru%')
+                    )
+                    """
+                )
+                cursor.execute(
+                    """
+                    DELETE FROM playlists
+                    WHERE id NOT LIKE 'ym:%'
+                      AND (url IS NULL OR url NOT LIKE '%music.yandex.ru%')
+                    """
+                )
+
+            cursor.executemany(
+                """
+                INSERT INTO playlists (id, title, url, status)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    url = excluded.url,
+                    status = excluded.status
+                """,
+                [(pl.id, pl.title, pl.url, pl.status) for pl in playlists],
+            )
+
+            self.conn.commit()
+        except Exception as e:
+            print(f"DB Error (PlaylistRepository.sync_vk_playlists): {e}")
+
     def get_all(self):
         cursor = self.conn.cursor()
         cursor.execute("SELECT id, title, url, status FROM playlists")

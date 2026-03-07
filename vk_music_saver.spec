@@ -19,6 +19,9 @@ datas = customtkinter_datas + bin_datas
 
 icon_path = project_root / "resources" / "VKMusicSaver.ico"
 
+# Добавляем папку resources, чтобы иконка была доступна и внутри запущенного приложения
+if (project_root / "resources").exists():
+    datas.append((str(project_root / "resources"), "resources"))
 
 a = Analysis(
     ["main.py"],

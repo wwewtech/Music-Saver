@@ -40,6 +40,7 @@ ENV/
 *.swp
 *.swo
 *~
+.gitconfig_global
 
 # OS
 Thumbs.db
