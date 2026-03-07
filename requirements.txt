@@ -3,6 +3,8 @@ selenium
 mutagen
 requests
 pyTelegramBotAPI
+yandex-music
+yt-dlp
 pyinstaller
 
 # @getmyid_bot

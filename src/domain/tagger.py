@@ -33,7 +33,7 @@ class Tagger:
         use_covers: bool = True,
     ):
         if not use_id3:
-            return
+            return True
 
         try:
             logger.debug(f"Открытие файла для тегирования: {filepath}")
@@ -74,7 +74,7 @@ class Tagger:
 
             # 3. Album
             album = track.album_obj
-            if album:
+            if album and track.source != "yandex":
                 audio.tags.add(TALB(encoding=3, text=album["title"]))
                 # WOAS
                 alb_url = (
@@ -87,13 +87,19 @@ class Tagger:
                 audio.tags.add(TALB(encoding=3, text=playlist_title))
 
             # 4. URLs
-            if track.main_artists:
-                main_art = track.main_artists[0]
-                art_id = main_art.get("domain") or main_art.get("id")
-                if art_id:
-                    audio.tags.add(WOAR(url=f"https://vk.com/artist/{art_id}"))
+            if track.source == "yandex":
+                # Yandex Music URL
+                if track.url:
+                    audio.tags.add(WOAF(url=track.url))
+            else:
+                # VK-specific URLs
+                if track.main_artists:
+                    main_art = track.main_artists[0]
+                    art_id = main_art.get("domain") or main_art.get("id")
+                    if art_id:
+                        audio.tags.add(WOAR(url=f"https://vk.com/artist/{art_id}"))
 
-            audio.tags.add(WOAF(url=f"https://vk.com/audio{track.id}"))
+                audio.tags.add(WOAF(url=f"https://vk.com/audio{track.id}"))
 
             # 5. Genre
             if track.genre_id and track.genre_id in VK_GENRES:
@@ -139,8 +145,10 @@ class Tagger:
             logger.debug(f"Сохранение изменений ID3 в файл: {filepath}")
             audio.save(v2_version=3)
             logger.info(f"Тегирование завершено успешно: {filepath}")
+            return True
         except Exception as e:
             logger.error(f"Критическая ошибка Tagger для {filepath}: {e}")
+            return False
 
 
 def sanitize_filename(name):

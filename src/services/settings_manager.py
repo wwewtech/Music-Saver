@@ -14,6 +14,7 @@ class SettingsManager:
             'tg_bot_token': '',
             'tg_chat_id': '',
             'processing_strategy': 'download_only',
+            'preferred_source': 'vk',
             'language': 'ru',
             'setup_completed': False,
             'download_path': 'data/downloads',

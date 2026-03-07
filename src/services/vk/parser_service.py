@@ -73,7 +73,22 @@ class ParserService:
             logger.warning("Main parser JS вернул пустой список или 0 треков.")
             return []
 
-        logger.info(f"JS-скрипт вернул {len(tracks)} треков.")
+        missing_url = 0
+        missing_access = 0
+        missing_hashes = 0
+        for t in tracks:
+            if not (t.get("url") or "").strip():
+                missing_url += 1
+            if not (t.get("access_key") or "").strip():
+                missing_access += 1
+            if not (t.get("action_hash") or "").strip() or not (t.get("url_hash") or "").strip():
+                missing_hashes += 1
+
+        logger.info(
+            "[VK_PARSE_SUMMARY] "
+            f"tracks={len(tracks)} missing_url={missing_url} missing_access_key={missing_access} "
+            f"missing_hashes={missing_hashes}"
+        )
         return tracks
 
     def _scroll_to_end(self):

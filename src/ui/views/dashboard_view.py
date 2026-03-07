@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from src.ui.design_system import ui_font
 
 
 class DashboardView(ctk.CTkFrame):
@@ -32,7 +33,7 @@ class DashboardView(ctk.CTkFrame):
         self.lbl_activity = ctk.CTkLabel(
             self.status_card,
             text=self.i18n.t("dashboard.ready"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=14),
+            font=ui_font(self.theme, 14, alt=True),
             text_color=self.theme["text"],
             anchor="w",
         )
@@ -41,7 +42,7 @@ class DashboardView(ctk.CTkFrame):
         self.lbl_tip_title = ctk.CTkLabel(
             self.status_card,
             text=self.i18n.t("dashboard.tip.title"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12, weight="bold"),
+            font=ui_font(self.theme, 12, "bold", alt=True),
             text_color=self.theme["muted"],
             anchor="w",
         )
@@ -50,7 +51,7 @@ class DashboardView(ctk.CTkFrame):
         self.lbl_tip_body = ctk.CTkLabel(
             self.status_card,
             text=self.i18n.t("dashboard.tip.body"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
+            font=ui_font(self.theme, 13, alt=True),
             text_color=self.theme["text"],
             anchor="w",
             justify="left",
@@ -71,7 +72,7 @@ class DashboardView(ctk.CTkFrame):
         lbl_val = ctk.CTkLabel(
             card,
             text=value,
-            font=ctk.CTkFont(family=self.theme["font"], size=32, weight="bold"),
+            font=ui_font(self.theme, 32, "bold"),
             text_color=self.theme["accent"],
         )
         lbl_val.pack(anchor="w", padx=18, pady=(16, 0))
@@ -79,7 +80,7 @@ class DashboardView(ctk.CTkFrame):
         lbl_title = ctk.CTkLabel(
             card,
             text=self.i18n.t(title_key),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
+            font=ui_font(self.theme, 13, alt=True),
             text_color=self.theme["muted"],
             anchor="w",
         )

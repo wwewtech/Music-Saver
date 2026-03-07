@@ -6,6 +6,7 @@ from queue import Queue, Empty
 
 from src.utils.logger import logger
 from src.ui.i18n import I18n
+from src.ui.design_system import get_theme, ui_font, button_style, entry_style, checkbox_style
 
 
 class WizardStep(ctk.CTkFrame):
@@ -58,14 +59,11 @@ class WizardStep(ctk.CTkFrame):
             self.nav_frame,
             text=self.i18n.t("wizard.back"),
             command=self.wizard.prev_step,
-            fg_color="transparent",
-            border_width=1,
-            border_color=self.theme["border"],
-            text_color=self.theme["muted"],
             corner_radius=10,
             height=42,
             width=120,
             font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
+            **button_style(self.theme, "ghost"),
         )
         self.btn_back.pack(side="left")
 
@@ -73,12 +71,11 @@ class WizardStep(ctk.CTkFrame):
             self.nav_frame,
             text=self.i18n.t("wizard.restart"),
             command=self.wizard.restart,
-            fg_color="#334155",
-            hover_color="#475569",
             corner_radius=10,
             height=42,
             width=140,
             font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
+            **button_style(self.theme, "secondary"),
         )
         self.btn_restart.pack(side="left", padx=(8, 0))
 
@@ -87,11 +84,10 @@ class WizardStep(ctk.CTkFrame):
             text=self.i18n.t("wizard.next"),
             command=self.on_next,
             state="disabled",
-            fg_color=self.theme["accent"],
-            hover_color=self.theme["accent_hover"],
             corner_radius=10,
             height=42,
             font=ctk.CTkFont(family=self.theme["font_fallback"], size=13, weight="bold"),
+            **button_style(self.theme, "primary"),
         )
         self.btn_next.pack(side="right")
 
@@ -152,9 +148,8 @@ class VKAuthStep(WizardStep):
             command=self.do_login,
             height=42,
             corner_radius=10,
-            fg_color=self.theme["accent"],
-            hover_color=self.theme["accent_hover"],
             font=ctk.CTkFont(family=self.theme["font_fallback"], size=13, weight="bold"),
+            **button_style(self.theme, "primary"),
         )
         self.btn_login.pack(anchor="w", pady=(10, 16))
 
@@ -232,8 +227,8 @@ class TelegramStep(WizardStep):
             command=self.on_mode_change,
             selected_color=self.theme["accent"],
             selected_hover_color=self.theme["accent_hover"],
-            unselected_color="#1f2a44",
-            unselected_hover_color="#26365a",
+            unselected_color=self.theme["surface_alt"],
+            unselected_hover_color=self.theme["nav_hover"],
             text_color=self.theme["text"],
         )
         self.seg_mode.pack(fill="x", pady=(0, 8))
@@ -256,7 +251,7 @@ class TelegramStep(WizardStep):
             self.step_scroll,
             placeholder_text=self.i18n.t("wizard.tg.token"),
             height=38,
-            corner_radius=10,
+            **entry_style(self.theme),
         )
         self.entry_token.pack(fill="x", pady=(6, 8))
 
@@ -264,7 +259,7 @@ class TelegramStep(WizardStep):
             self.step_scroll,
             placeholder_text=self.i18n.t("wizard.tg.chat"),
             height=38,
-            corner_radius=10,
+            **entry_style(self.theme),
         )
         self.entry_chat_id.pack(fill="x", pady=(0, 8))
 
@@ -286,10 +281,9 @@ class TelegramStep(WizardStep):
             btn_row,
             text=self.i18n.t("telegram.test"),
             command=self.test_conn,
-            fg_color="#b45309",
-            hover_color="#92400e",
             corner_radius=10,
             height=40,
+            **button_style(self.theme, "warning"),
         )
         self.btn_test.pack(side="left")
 
@@ -297,11 +291,10 @@ class TelegramStep(WizardStep):
             btn_row,
             text=self.i18n.t("wizard.tg.help.show"),
             command=self.toggle_help,
-            fg_color="#1f2a44",
-            hover_color="#2a3b63",
             corner_radius=10,
             height=40,
             width=140,
+            **button_style(self.theme, "secondary"),
         )
         self.btn_help.pack(side="left", padx=(8, 0))
 
@@ -310,13 +303,10 @@ class TelegramStep(WizardStep):
         self.btn_skip = ctk.CTkButton(
             self.nav_frame,
             text=self.i18n.t("wizard.skip"),
-            fg_color="transparent",
-            border_width=1,
-            border_color=self.theme["border"],
-            text_color=self.theme["muted"],
             command=self.skip_telegram,
             corner_radius=10,
             height=40,
+            **button_style(self.theme, "ghost"),
         )
         self.btn_skip.pack(side="left")
 
@@ -353,7 +343,7 @@ class TelegramStep(WizardStep):
         self.btn_test.configure(state=state)
 
         if needs_tg:
-            self.lbl_mode_state.configure(text=self.i18n.t("wizard.tg.mode.required"), text_color="#f59e0b")
+            self.lbl_mode_state.configure(text=self.i18n.t("wizard.tg.mode.required"), text_color=self.theme["warning"])
             self.btn_next.configure(state="disabled", text=self.i18n.t("wizard.next"))
         else:
             self.lbl_mode_state.configure(text=self.i18n.t("wizard.tg.mode.local"), text_color=self.theme["success"])
@@ -368,7 +358,7 @@ class TelegramStep(WizardStep):
     def _build_help_panel(self):
         self.help_panel = ctk.CTkFrame(
             self.step_scroll,
-            fg_color="#0c1530",
+            fg_color=self.theme["surface"],
             border_width=1,
             border_color=self.theme["border"],
             corner_radius=12,
@@ -401,10 +391,9 @@ class TelegramStep(WizardStep):
             links_row,
             text=self.i18n.t("wizard.tg.open.botfather"),
             command=lambda: self._open_link("https://t.me/BotFather"),
-            fg_color="#334155",
-            hover_color="#475569",
             corner_radius=8,
             height=32,
+            **button_style(self.theme, "secondary"),
         )
         self.btn_open_botfather.pack(side="left")
 
@@ -412,10 +401,9 @@ class TelegramStep(WizardStep):
             links_row,
             text=self.i18n.t("wizard.tg.open.getmyid"),
             command=lambda: self._open_link("https://t.me/getmyid_bot"),
-            fg_color="#334155",
-            hover_color="#475569",
             corner_radius=8,
             height=32,
+            **button_style(self.theme, "secondary"),
         )
         self.btn_open_getmyid.pack(side="left", padx=(8, 0))
 
@@ -435,7 +423,7 @@ class TelegramStep(WizardStep):
             ["wizard.tg.stage3.step1", "wizard.tg.stage3.step2", "wizard.tg.stage3.step3"],
         )
 
-        checklist = ctk.CTkFrame(self.help_panel, fg_color="#101b39", corner_radius=10)
+        checklist = ctk.CTkFrame(self.help_panel, fg_color=self.theme["surface_alt"], corner_radius=10)
         checklist.pack(fill="x", padx=12, pady=(4, 12))
 
         self.lbl_checklist = ctk.CTkLabel(
@@ -452,13 +440,13 @@ class TelegramStep(WizardStep):
         self.chk_admin_var = ctk.BooleanVar(value=False)
         self.chk_chat_var = ctk.BooleanVar(value=False)
 
-        self.chk_bot = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.bot"), variable=self.chk_bot_var, command=self._update_help_progress)
+        self.chk_bot = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.bot"), variable=self.chk_bot_var, command=self._update_help_progress, **checkbox_style(self.theme))
         self.chk_bot.pack(anchor="w", padx=10, pady=2)
-        self.chk_group = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.group"), variable=self.chk_group_var, command=self._update_help_progress)
+        self.chk_group = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.group"), variable=self.chk_group_var, command=self._update_help_progress, **checkbox_style(self.theme))
         self.chk_group.pack(anchor="w", padx=10, pady=2)
-        self.chk_admin = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.admin"), variable=self.chk_admin_var, command=self._update_help_progress)
+        self.chk_admin = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.admin"), variable=self.chk_admin_var, command=self._update_help_progress, **checkbox_style(self.theme))
         self.chk_admin.pack(anchor="w", padx=10, pady=2)
-        self.chk_chat = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.chat"), variable=self.chk_chat_var, command=self._update_help_progress)
+        self.chk_chat = ctk.CTkCheckBox(checklist, text=self.i18n.t("wizard.tg.check.chat"), variable=self.chk_chat_var, command=self._update_help_progress, **checkbox_style(self.theme))
         self.chk_chat.pack(anchor="w", padx=10, pady=2)
 
         self.lbl_progress = ctk.CTkLabel(
@@ -472,7 +460,7 @@ class TelegramStep(WizardStep):
         self._update_help_progress()
 
     def _create_stage_card(self, parent, title_key, step_keys):
-        card = ctk.CTkFrame(parent, fg_color="#101b39", corner_radius=10)
+        card = ctk.CTkFrame(parent, fg_color=self.theme["surface_alt"], corner_radius=10)
         card.pack(fill="x", padx=12, pady=(0, 8))
 
         title = ctk.CTkLabel(
@@ -609,7 +597,7 @@ class StorageStep(WizardStep):
             self.content_frame,
             placeholder_text=self.i18n.t("wizard.storage.path"),
             height=38,
-            corner_radius=10,
+            **entry_style(self.theme),
         )
         self.entry_path.pack(fill="x", pady=(12, 10))
         self.entry_path.insert(0, "data/downloads")
@@ -618,10 +606,9 @@ class StorageStep(WizardStep):
             self.content_frame,
             text=self.i18n.t("wizard.storage.browse"),
             command=self.browse,
-            fg_color="#334155",
-            hover_color="#475569",
             corner_radius=10,
             height=40,
+            **button_style(self.theme, "secondary"),
         )
         self.btn_browse.pack(anchor="w")
 
@@ -654,19 +641,7 @@ class SetupWizard(ctk.CTk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.theme = {
-            "font": "Segoe UI Variable Display",
-            "font_fallback": "Segoe UI",
-            "bg": "#070b14",
-            "panel": "#0d1424",
-            "surface": "#111a2e",
-            "text": "#f1f5f9",
-            "muted": "#94a3b8",
-            "accent": "#3b82f6",
-            "accent_hover": "#2563eb",
-            "success": "#16a34a",
-            "border": "#1f2a44",
-        }
+        self.theme = get_theme()
         self.i18n = I18n(self.controller.get_language() if hasattr(self.controller, "get_language") else "ru")
 
         self.title(self.i18n.t("wizard.title"))
@@ -705,23 +680,35 @@ class SetupWizard(ctk.CTk):
             top_row,
             text="",
             text_color=self.theme["muted"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12, weight="bold"),
+            font=ui_font(self.theme, 12, "bold", alt=True),
         )
         self.lbl_progress.pack(side="left")
 
-        self.lang_switch = ctk.CTkSegmentedButton(
-            top_row,
-            values=["RU", "EN"],
-            command=self.on_language_change,
-            selected_color=self.theme["accent"],
-            selected_hover_color=self.theme["accent_hover"],
-            unselected_color="#1f2a44",
-            unselected_hover_color="#26365a",
-            text_color=self.theme["text"],
-            width=110,
-        )
+        self.lang_switch = ctk.CTkFrame(top_row, fg_color=self.theme["surface"], corner_radius=10)
         self.lang_switch.pack(side="right")
-        self.lang_switch.set("RU" if self.i18n.language == "ru" else "EN")
+
+        self.btn_lang_ru = ctk.CTkButton(
+            self.lang_switch,
+            text="RU",
+            width=52,
+            height=30,
+            corner_radius=8,
+            font=ui_font(self.theme, 12, "bold"),
+            command=lambda: self.on_language_change("RU"),
+        )
+        self.btn_lang_ru.pack(side="left", padx=(4, 2), pady=4)
+
+        self.btn_lang_en = ctk.CTkButton(
+            self.lang_switch,
+            text="EN",
+            width=52,
+            height=30,
+            corner_radius=8,
+            font=ui_font(self.theme, 12, "bold"),
+            command=lambda: self.on_language_change("EN"),
+        )
+        self.btn_lang_en.pack(side="left", padx=(2, 4), pady=4)
+        self._set_language_buttons("ru" if self.i18n.language == "ru" else "en")
 
         self.steps_host = ctk.CTkFrame(self.container, fg_color="transparent")
         self.steps_host.pack(fill="both", expand=True, padx=14, pady=(6, 14))
@@ -821,17 +808,29 @@ class SetupWizard(ctk.CTk):
                     current_frame.btn_restart.pack(side="left", padx=(8, 0))
                 current_frame.btn_back.configure(state="normal")
 
+    def _set_language_buttons(self, language):
+        active_style = button_style(self.theme, "primary")
+        idle_style = button_style(self.theme, "secondary")
+        if language == "ru":
+            self.btn_lang_ru.configure(**active_style)
+            self.btn_lang_en.configure(**idle_style)
+        else:
+            self.btn_lang_ru.configure(**idle_style)
+            self.btn_lang_en.configure(**active_style)
+
     def on_language_change(self, value):
         language = "ru" if value == "RU" else "en"
         if language == self.i18n.language:
             return
         self.i18n.set_language(language)
+        self._set_language_buttons(language)
         if hasattr(self.controller, "set_language"):
             self.controller.set_language(language)
         self.apply_language()
 
     def apply_language(self):
         self.title(self.i18n.t("wizard.title"))
+        self._set_language_buttons(self.i18n.language)
         self._render_progress()
         for frame in self.steps_map.values():
             frame.apply_language()

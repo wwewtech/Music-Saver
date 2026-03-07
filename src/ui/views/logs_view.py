@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import datetime
+from src.ui.design_system import ui_font, button_style
 
 
 class LogsView(ctk.CTkFrame):
@@ -11,7 +12,7 @@ class LogsView(ctk.CTkFrame):
         self.lbl_title = ctk.CTkLabel(
             self,
             text=self.i18n.t("logs.title"),
-            font=ctk.CTkFont(family=self.theme["font"], size=24, weight="bold"),
+            font=ui_font(self.theme, 24, "bold"),
             text_color=self.theme["text"],
             anchor="w",
         )
@@ -27,7 +28,7 @@ class LogsView(ctk.CTkFrame):
             topbar,
             text=self.i18n.t("logs.subtitle"),
             text_color=self.theme["muted"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12),
+            font=ui_font(self.theme, 12, alt=True),
             anchor="w",
         )
         self.lbl_subtitle.pack(side="left")
@@ -37,9 +38,8 @@ class LogsView(ctk.CTkFrame):
             text=self.i18n.t("logs.clear"),
             width=100,
             height=34,
-            fg_color="#334155",
-            hover_color="#475569",
             command=self.clear,
+            **button_style(self.theme, "secondary"),
         )
         self.btn_clear.pack(side="right")
         
@@ -49,7 +49,7 @@ class LogsView(ctk.CTkFrame):
             border_width=1,
             border_color=self.theme["border"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
+            font=ui_font(self.theme, 13, alt=True),
             corner_radius=12,
         )
         self.textbox.pack(fill="both", expand=True, padx=6, pady=(0, 2))

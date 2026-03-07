@@ -10,9 +10,14 @@ def setup_logger():
     logger = logging.getLogger("VKMusicSaver")
     logger.setLevel(logging.DEBUG)
 
+    if logger.handlers:
+        return logger
+
     # File Handler
     file_handler = logging.FileHandler(LOG_PATH, encoding="utf-8")
-    file_formatter = logging.Formatter("%(asctime)s - [%(levelname)s] - %(name)s - %(message)s")
+    file_formatter = logging.Formatter(
+        "%(asctime)s - [%(levelname)s] - %(name)s - %(threadName)s - %(filename)s:%(lineno)d - %(message)s"
+    )
     file_handler.setFormatter(file_formatter)
     file_handler.setLevel(logging.DEBUG)
 

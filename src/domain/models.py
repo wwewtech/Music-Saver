@@ -45,4 +45,5 @@ class Track:
     tg_status: str = "pending"
     tg_message_id: Optional[str] = None
     tg_file_id: Optional[str] = None
+    source: str = "vk"
 
