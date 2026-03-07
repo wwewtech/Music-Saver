@@ -27,8 +27,7 @@ class AuthService:
                     self.user_id = match.group(1)
                     logger.debug(f"ID пользователя извлечен из ссылки: {self.user_id}")
                     return self.user_id
-                    return self.user_id
-            except:
+            except Exception:
                 pass
 
             # Try JS
@@ -37,6 +36,6 @@ class AuthService:
                 self.user_id = str(uid)
                 return self.user_id
 
-        except Exception as e:
+        except Exception:
             return None
         return None

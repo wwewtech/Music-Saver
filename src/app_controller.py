@@ -34,6 +34,8 @@ class AppController:
         self.telegram_service = TelegramService(settings.get('tg_bot_token'), settings.get('tg_chat_id'))
 
         self.driver = None
+        self._login_lock = threading.Lock()
+        self._is_logging_in = False
 
         self.is_running = False
         self.user_id = None
@@ -45,17 +47,47 @@ class AppController:
         self.on_download_complete = lambda: None
         self.on_login_success = lambda: None
 
+    def _is_driver_alive(self):
+        if not self.driver:
+            return False
+        try:
+            _ = self.driver.current_url
+            return True
+        except Exception:
+            return False
+
     def save_tg_settings(self, token, chat_id):
         logger.info(f"Сохранение настроек Telegram: Token={token[:5]}... ChatID={chat_id}")
         self.settings_manager.save_settings(token, chat_id)
         # Re-init service
         self.telegram_service = TelegramService(token, chat_id)
-        return True, "Настройки сохранены locally."
+        return True, "Настройки сохранены."
+
+    def get_language(self):
+        return self.settings_manager.get("language", "ru")
+
+    def set_language(self, language):
+        if language in ["ru", "en"]:
+            self.settings_manager.set("language", language)
+
+    def get_processing_strategy(self):
+        strategy = self.settings_manager.get("processing_strategy", "download_only")
+        if strategy not in ["download_only", "download_upload", "direct_transfer"]:
+            return "download_only"
+        return strategy
+
+    def set_processing_strategy(self, strategy):
+        if strategy in ["download_only", "download_upload", "direct_transfer"]:
+            self.settings_manager.set("processing_strategy", strategy)
+
+    def is_telegram_configured(self):
+        settings = self.settings_manager.get_settings()
+        return bool(settings.get("tg_bot_token") and settings.get("tg_chat_id"))
 
     def test_tg_connection(self):
         if not self.telegram_service:
             return False, "Сервис Telegram не инициализирован."
-        return self.telegram_service.send_test_message("Test message from VK Music Saver Pro")
+        return self.telegram_service.send_test_message("Тестовое сообщение из VK Music Saver Pro")
 
     def get_tg_settings(self):
         return self.settings_manager.get_settings()
@@ -64,20 +96,21 @@ class AppController:
         logger.debug("Запрос статистики для дашборда...")
         pl_count = self.playlist_repo.get_count()
         track_stats = self.track_repo.get_stats()
+        download_dir = self.get_download_dir()
         
         # Calculate storage used
         storage_size_mb = 0
         try:
             total_size = 0
-            if os.path.exists(DOWNLOAD_DIR):
-                for dirpath, dirnames, filenames in os.walk(DOWNLOAD_DIR):
+            if os.path.exists(download_dir):
+                for dirpath, dirnames, filenames in os.walk(download_dir):
                     for f in filenames:
                         fp = os.path.join(dirpath, f)
                         if not os.path.islink(fp):
                             total_size += os.path.getsize(fp)
                 storage_size_mb = round(total_size / (1024 * 1024), 2)
             else:
-                logger.debug(f"Папка загрузок {DOWNLOAD_DIR} не найдена.")
+                logger.debug(f"Папка загрузок {download_dir} не найдена.")
         except Exception as e:
             logger.error(f"Error calculating storage: {e}")
             
@@ -91,11 +124,39 @@ class AppController:
         logger.debug(f"Статистика собрана: {stats}")
         return stats
 
+    def get_download_dir(self):
+        configured_path = self.settings_manager.get("download_path", "")
+        if configured_path:
+            return os.path.abspath(configured_path)
+        return DOWNLOAD_DIR
+
     def start_browser_and_login(self):
         def _task():
+            with self._login_lock:
+                if self._is_logging_in:
+                    msg = "Вход уже выполняется. Дождитесь завершения текущей попытки."
+                    self.on_log(msg)
+                    logger.warning(msg)
+                    return
+                self._is_logging_in = True
+
             self.on_log("Запуск браузера...")
             logger.info("Пользователь нажал 'Войти'. Запускаем Chrome...")
             try:
+                if self._is_driver_alive() and self.user_id:
+                    msg = f"Браузер уже активен. Вы уже вошли (ID: {self.user_id})."
+                    self.on_log(msg)
+                    logger.info(msg)
+                    self.on_login_success()
+                    return
+
+                if self.driver and not self._is_driver_alive():
+                    try:
+                        self.driver.quit()
+                    except Exception:
+                        pass
+                    self.driver = None
+
                 self.driver = VKDriverFactory.create_driver()
                 auth_service = AuthService(self.driver)
                 self.on_log("Пожалуйста, войдите в ВК...")
@@ -115,6 +176,9 @@ class AppController:
                 err_msg = f"Критическая ошибка при входе: {e}"
                 self.on_log(err_msg)
                 logger.exception(err_msg)
+            finally:
+                with self._login_lock:
+                    self._is_logging_in = False
 
         threading.Thread(target=_task, daemon=True).start()
 
@@ -151,8 +215,30 @@ class AppController:
     def start_download(self, selected_playlists: List[Playlist], settings: dict):
         # settings: { "use_id3": bool, "use_covers": bool, "strategy": str }
         # Strategy: "download_only", "download_upload", "direct_transfer"
+        if not selected_playlists:
+            self.on_log("Не выбраны плейлисты для обработки.")
+            self.on_download_complete()
+            return
+
         self.is_running = True
-        strategy = settings.get("strategy", "download_only")
+        strategy = settings.get("strategy", self.get_processing_strategy())
+        download_root = self.get_download_dir()
+
+        try:
+            os.makedirs(download_root, exist_ok=True)
+        except Exception as e:
+            self.on_log(f"Ошибка доступа к папке загрузки: {e}")
+            logger.exception("Ошибка создания папки загрузки")
+            self.is_running = False
+            self.on_download_complete()
+            return
+
+        if strategy in ["download_upload", "direct_transfer"] and not self.is_telegram_configured():
+            warn_msg = "Telegram не настроен. Переключаемся на режим 'только скачивание на ПК'."
+            self.on_log(warn_msg)
+            logger.warning(warn_msg)
+            strategy = "download_only"
+            self.set_processing_strategy(strategy)
 
         def _task():
             if not self.driver:
@@ -185,7 +271,7 @@ class AppController:
 
                 # Prepare folder
                 pl_folder_name = sanitize_filename(pl.title)
-                pl_dir = os.path.join(DOWNLOAD_DIR, pl_folder_name)
+                pl_dir = os.path.join(download_root, pl_folder_name)
                 os.makedirs(pl_dir, exist_ok=True)
 
                 # Prepare Telegram Topic (if uploading)
@@ -343,6 +429,11 @@ class AppController:
         self.is_running = False
         if self.driver:
             logger.info("Закрытие Selenium Driver...")
-            self.driver.quit()
+            try:
+                self.driver.quit()
+            except Exception as e:
+                logger.warning(f"Ошибка при закрытии Selenium Driver: {e}")
+            finally:
+                self.driver = None
         self._db_manager.close()
         logger.info("База данных закрыта.")

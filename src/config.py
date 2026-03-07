@@ -1,23 +1,49 @@
 import os
+import sys
 
 # Определяем корень проекта
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+def _resolve_binary(binary_name: str) -> str:
+    candidates = [
+        os.path.join(APP_DIR, "bin", binary_name),
+        os.path.join(RESOURCE_DIR, "bin", binary_name),
+        os.path.join(APP_DIR, binary_name),
+        os.path.join(RESOURCE_DIR, binary_name),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[0]
+
+
+if getattr(sys, "frozen", False):
+    APP_DIR = os.path.dirname(sys.executable)
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", APP_DIR)
+else:
+    APP_DIR = BASE_DIR
+    RESOURCE_DIR = BASE_DIR
+
 # Папка для бинарников
-BIN_DIR = os.path.join(BASE_DIR, "bin")
+BIN_DIR = os.path.join(APP_DIR, "bin")
 
 # Пути к файлам бинарников
-CHROMEDRIVER_PATH = os.path.join(BIN_DIR, "chromedriver.exe")
-FFMPEG_PATH = os.path.join(BIN_DIR, "ffmpeg.exe")
+CHROMEDRIVER_PATH = _resolve_binary("chromedriver.exe")
+FFMPEG_PATH = _resolve_binary("ffmpeg.exe")
 
 # Папки данных
-DATA_DIR = os.path.join(BASE_DIR, "data")
+DATA_DIR = os.path.join(APP_DIR, "data")
 PROFILE_DIR = os.path.join(DATA_DIR, "chrome_profile")
 DOWNLOAD_DIR = os.path.join(DATA_DIR, "downloads")
 
 # Файлы данных
 DB_PATH = os.path.join(DATA_DIR, "vk_music.db")
 LOG_PATH = os.path.join(DATA_DIR, "app.log")
+
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(PROFILE_DIR, exist_ok=True)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # VK Genres Mapping
 VK_GENRES = {
