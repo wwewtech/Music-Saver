@@ -2,9 +2,9 @@
 
 <div align="center">
 
-### 🎵 VK / Яндекс → локальная музыкальная библиотека
+### 🎵 Desktop app for downloading music from VK
 
-[Русская версия](./README.ru.md) • [English version](./README.en.md)
+A local Python tool with a CustomTkinter UI, automated tagging, and download history storage.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![CustomTkinter](https://img.shields.io/badge/UI-CustomTkinter-1F6FEB?style=for-the-badge)
@@ -25,8 +25,58 @@
 
 </div>
 
-Choose the language you prefer:
+<p align="center">
+	<a href="./README.ru.md">Русская версия</a>
+</p>
 
-- 🇷🇺 [README.ru.md](./README.ru.md)
-- 🇬🇧 [README.en.md](./README.en.md)
+---
 
+## What this project does
+
+`VK Music Saver` downloads tracks from VK in a desktop workflow with metadata, cover art, and local history.
+
+The project is built for a practical “launch and use” flow: graphical UI, modular architecture, and built-in service configuration.
+
+## Key features
+
+- Music downloading from VK via Selenium automation.
+- ID3 tagging support (artist, title, album, cover art).
+- Local SQLite database for tracking downloaded tracks.
+- Layered architecture: UI, domain logic, services, and database.
+- Additional services for Telegram and Yandex scenarios in the project.
+
+## Requirements
+
+- Python `3.10+`
+- Google Chrome (latest version recommended)
+- Dependencies listed in `requirements.txt`
+
+## Quick start
+
+```bash
+python -m venv .venv
+# Windows
+.\.venv\Scripts\activate
+
+pip install -r requirements.txt
+python main.py
+```
+
+## Project structure
+
+```text
+src/
+├─ app_controller.py        # application orchestration
+├─ ui/                      # windows, views, and UI components
+├─ services/                # business services (VK, Telegram, Yandex, download)
+├─ domain/                  # models and tagger
+├─ database/                # SQLite manager and repositories
+└─ utils/                   # logging and helper utilities
+```
+
+## Build
+
+The standalone build uses a `PyInstaller` spec:
+
+- `vk_music_saver.spec`
+- `build.ps1`
