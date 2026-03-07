@@ -2,23 +2,48 @@ import customtkinter as ctk
 
 from src.ui.design_system import surface_style, ui_font
 
+_resize_locked = False
+_pending_wrap_widgets = []
+
+
+def set_resize_lock(locked):
+    global _resize_locked
+    _resize_locked = locked
+
+
+def flush_pending_wraps():
+    global _pending_wrap_widgets
+    jobs = _pending_wrap_widgets
+    _pending_wrap_widgets = []
+    for fn in jobs:
+        fn()
+
 
 def bind_auto_wrap(widget, label, horizontal_padding=0, min_wrap=120):
     def _apply_wrap():
         setattr(label, "_auto_wrap_after_id", None)
+        if _resize_locked:
+            if _apply_wrap not in _pending_wrap_widgets:
+                _pending_wrap_widgets.append(_apply_wrap)
+            return
         try:
+            if not widget.winfo_ismapped():
+                return
             width = widget.winfo_width() - horizontal_padding
         except Exception:
             return
 
         if width > 1:
             wraplength = max(width, min_wrap)
-            if getattr(label, "_auto_wrap_last_wrap", None) == wraplength:
+            last = getattr(label, "_auto_wrap_last_wrap", None)
+            if last is not None and abs(last - wraplength) < 50:
                 return
             label.configure(wraplength=wraplength)
             label._auto_wrap_last_wrap = wraplength
 
     def _update(_event=None):
+        if _resize_locked:
+            return
         after_id = getattr(label, "_auto_wrap_after_id", None)
         if after_id is not None:
             try:
@@ -27,9 +52,9 @@ def bind_auto_wrap(widget, label, horizontal_padding=0, min_wrap=120):
                 pass
 
         try:
-            label._auto_wrap_after_id = widget.after(50, _apply_wrap)
+            label._auto_wrap_after_id = widget.after(150, _apply_wrap)
         except Exception:
-            _apply_wrap()
+            pass
 
     widget.bind("<Configure>", _update, add="+")
     widget.after(0, _update)
@@ -69,39 +94,51 @@ class StatusBadge(ctk.CTkFrame):
         self.label.pack(padx=10, pady=4)
         self.configure_tone(tone)
 
+    _tone_map = None
+
     def configure_tone(self, tone="neutral", text=None):
-        tone_map = {
-            "neutral": {
-                "fg": self.theme["surface_emphasis"],
-                "border": self.theme["border_soft"],
-                "text": self.theme["text_soft"],
-            },
-            "success": {
-                "fg": "#102017",
-                "border": "#1e5c39",
-                "text": self.theme["success"],
-            },
-            "warning": {
-                "fg": "#24180b",
-                "border": "#6d4912",
-                "text": self.theme["warning"],
-            },
-            "danger": {
-                "fg": "#261214",
-                "border": "#6d2a2d",
-                "text": self.theme["danger"],
-            },
-            "info": {
-                "fg": "#101826",
-                "border": "#24456f",
-                "text": self.theme["info"],
-            },
-        }
-        colors = tone_map.get(tone, tone_map["neutral"])
+        if StatusBadge._tone_map is None:
+            StatusBadge._tone_map = {}
+        theme_id = id(self.theme)
+        if theme_id not in StatusBadge._tone_map:
+            StatusBadge._tone_map[theme_id] = {
+                "neutral": {
+                    "fg": self.theme["surface_emphasis"],
+                    "border": self.theme["border_soft"],
+                    "text": self.theme["text_soft"],
+                },
+                "success": {
+                    "fg": "#102017",
+                    "border": "#1e5c39",
+                    "text": self.theme["success"],
+                },
+                "warning": {
+                    "fg": "#24180b",
+                    "border": "#6d4912",
+                    "text": self.theme["warning"],
+                },
+                "danger": {
+                    "fg": "#261214",
+                    "border": "#6d2a2d",
+                    "text": self.theme["danger"],
+                },
+                "info": {
+                    "fg": "#101826",
+                    "border": "#24456f",
+                    "text": self.theme["info"],
+                },
+            }
+        colors = StatusBadge._tone_map[theme_id].get(tone, StatusBadge._tone_map[theme_id]["neutral"])
         next_text = text or self.label.cget("text")
         if self.label.cget("text") != next_text or self.label.cget("text_color") != colors["text"]:
             self.label.configure(text=next_text, text_color=colors["text"])
-        self.configure(fg_color=colors["fg"], border_color=colors["border"])
+        try:
+            current_fg = self.cget("fg_color")
+            current_border = self.cget("border_color")
+        except Exception:
+            current_fg = current_border = None
+        if current_fg != colors["fg"] or current_border != colors["border"]:
+            self.configure(fg_color=colors["fg"], border_color=colors["border"])
 
 
 class SectionHeader(ctk.CTkFrame):

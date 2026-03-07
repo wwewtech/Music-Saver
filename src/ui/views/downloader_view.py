@@ -1,5 +1,6 @@
+import tkinter as tk
 import customtkinter as ctk
-from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap
+from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap, set_resize_lock, flush_pending_wraps
 from src.ui.design_system import button_style, checkbox_style, ui_font
 
 
@@ -59,13 +60,13 @@ class DownloaderView(ctk.CTkFrame):
         self.lbl_status.grid(row=1, column=0, columnspan=3, sticky="ew", padx=14, pady=(0, 14))
         bind_auto_wrap(source_frame, self.lbl_status, horizontal_padding=28, min_wrap=220)
 
-        body = ctk.CTkFrame(self, fg_color="transparent")
+        body = tk.Frame(self, bg=self.theme["page_bg"])
         body.grid(row=1, column=0, sticky="nsew")
         body.grid_columnconfigure(0, weight=5)
         body.grid_columnconfigure(1, weight=3)
         body.grid_rowconfigure(0, weight=1)
 
-        left_column = ctk.CTkFrame(body, fg_color="transparent")
+        left_column = tk.Frame(body, bg=self.theme["page_bg"])
         left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         left_column.grid_columnconfigure(0, weight=1)
         left_column.grid_rowconfigure(1, weight=1)
@@ -141,7 +142,7 @@ class DownloaderView(ctk.CTkFrame):
         )
         self.scroll.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 14))
 
-        right_column = ctk.CTkFrame(body, fg_color="transparent")
+        right_column = tk.Frame(body, bg=self.theme["page_bg"])
         right_column.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         right_column.grid_columnconfigure(0, weight=1)
 
@@ -217,7 +218,7 @@ class DownloaderView(ctk.CTkFrame):
         )
         self.lbl_ym_header.pack(fill="x", padx=14, pady=(14, 4))
 
-        ym_url_row = ctk.CTkFrame(ym_frame, fg_color="transparent")
+        ym_url_row = tk.Frame(ym_frame, bg=self.theme["surface"])
         ym_url_row.pack(fill="x", padx=14, pady=(0, 14))
         ym_url_row.grid_columnconfigure(0, weight=1)
 
@@ -350,7 +351,13 @@ class DownloaderView(ctk.CTkFrame):
         self.update_playlists(self.all_playlists)
 
     def on_show(self):
-        self.apply_preferred_source()
+        preferred = (
+            self.controller.get_preferred_source()
+            if hasattr(self.controller, "get_preferred_source")
+            else "vk"
+        )
+        if preferred != self.current_source:
+            self.set_source(preferred)
 
     def _matches_source(self, playlist):
         is_yandex = str(getattr(playlist, "id", "")).startswith(
@@ -414,6 +421,7 @@ class DownloaderView(ctk.CTkFrame):
         self.summary_header.configure_content(description=summary)
 
     def apply_language(self):
+        set_resize_lock(True)
         self.scan_header.configure_content(
             title=self.i18n.t("downloader.title"),
             description=self.i18n.t("downloader.subtitle"),
@@ -466,3 +474,5 @@ class DownloaderView(ctk.CTkFrame):
         if hasattr(self, "btn_empty_scan_vk"):
             self.btn_empty_scan_vk.configure(text=self.i18n.t("downloader.scan.vk"))
         self._update_source_controls()
+        set_resize_lock(False)
+        flush_pending_wraps()

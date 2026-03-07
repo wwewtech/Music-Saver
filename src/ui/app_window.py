@@ -1,10 +1,11 @@
 import customtkinter as ctk
+import tkinter as tk
 from tkinter import TclError
 from queue import Queue, Empty
 from concurrent.futures import ThreadPoolExecutor
 import os
 from src.app_config import RESOURCE_DIR
-from src.ui.components.primitives import SectionHeader, StatusBadge, Surface
+from src.ui.components.primitives import SectionHeader, StatusBadge, Surface, set_resize_lock, flush_pending_wraps
 from src.ui.views.dashboard_view import DashboardView
 from src.ui.views.downloader_view import DownloaderView
 from src.ui.views.telegram_view import TelegramView
@@ -17,7 +18,7 @@ class AppWindow(ctk.CTk):
     STATS_POLL_INTERVAL_MS = 30000
     UI_EVENTS_POLL_MS = 250
     MAX_UI_EVENTS_PER_TICK = 50
-    RESIZE_SETTLE_MS = 150
+    RESIZE_SETTLE_MS = 250
     PENDING_LOGS_MAX = 2000
     DEFAULT_WIDTH = 1320
     DEFAULT_HEIGHT = 880
@@ -46,6 +47,9 @@ class AppWindow(ctk.CTk):
         self._last_window_size = None
         self._views_language_state = {}
         self.current_view = None
+        self._active_nav_btn = None
+        self._nav_style = button_style(self.theme, "nav")
+        self._nav_active_style = button_style(self.theme, "nav_active")
         self.view_titles = {
             "dashboard": ("dashboard.title", "dashboard.subtitle"),
             "vk": ("downloader.title", "downloader.subtitle"),
@@ -158,7 +162,7 @@ class AppWindow(ctk.CTk):
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
-        brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        brand_frame = tk.Frame(self.sidebar, bg=self.theme["panel"])
         brand_frame.pack(fill="x", padx=20, pady=(24, 14))
 
         self.lbl_shell_caption = ctk.CTkLabel(
@@ -188,7 +192,7 @@ class AppWindow(ctk.CTk):
         )
         self.lbl_logo_sub.pack(fill="x", pady=(4, 0))
 
-        nav_block = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        nav_block = tk.Frame(self.sidebar, bg=self.theme["panel"])
         nav_block.pack(fill="x", padx=14, pady=(6, 0))
 
         self.lbl_nav = ctk.CTkLabel(
@@ -314,7 +318,7 @@ class AppWindow(ctk.CTk):
             self.btn_lang_en.configure(**active_style)
 
     def setup_views(self):
-        self.main_area = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_area = tk.Frame(self, bg=self.theme["page_bg"])
         self.main_area.grid(row=0, column=1, sticky="nsew", padx=16, pady=16)
         self.main_area.grid_rowconfigure(1, weight=1)
         self.main_area.grid_columnconfigure(0, weight=1)
@@ -343,50 +347,60 @@ class AppWindow(ctk.CTk):
         )
         self.live_badge.grid(row=0, column=1, sticky="e", padx=18, pady=18)
 
-        self.view_container = ctk.CTkFrame(self.main_area, fg_color="transparent")
+        self.view_container = tk.Frame(self.main_area, bg=self.theme["page_bg"])
         self.view_container.grid(row=1, column=0, sticky="nsew")
         self.view_container.grid_rowconfigure(0, weight=1)
         self.view_container.grid_columnconfigure(0, weight=1)
+        self.view_container.grid_propagate(False)
 
         self.views = {}
-        self.views["dashboard"] = DashboardView(
-            self.view_container, self.controller, self.i18n, self.theme
-        )
-        self.views["vk"] = DownloaderView(
-            self.view_container, self.controller, self.i18n, self.theme
-        )
-        self.views["tg"] = TelegramView(
-            self.view_container, self.controller, self.i18n, self.theme
-        )
-        self.views["logs"] = LogsView(self.view_container, self.i18n, self.theme)
-
-        for name, view in self.views.items():
-            view.grid(row=0, column=0, sticky="nsew")
-            self._views_language_state[name] = self.i18n.language
+        self._view_constructors = {
+            "dashboard": lambda: DashboardView(
+                self.view_container, self.controller, self.i18n, self.theme
+            ),
+            "vk": lambda: DownloaderView(
+                self.view_container, self.controller, self.i18n, self.theme
+            ),
+            "tg": lambda: TelegramView(
+                self.view_container, self.controller, self.i18n, self.theme
+            ),
+            "logs": lambda: LogsView(self.view_container, self.i18n, self.theme),
+        }
 
         # Init default
         self.show_view("dashboard")
 
-    def show_view(self, name):
+    def _get_or_create_view(self, name):
         if name not in self.views:
+            constructor = self._view_constructors.get(name)
+            if constructor is None:
+                return None
+            view = constructor()
+            self.views[name] = view
+            self._views_language_state[name] = self.i18n.language
+        return self.views[name]
+
+    def show_view(self, name):
+        if name not in self._view_constructors:
+            return
+
+        if self.current_view == name:
             return
 
         previous_view = self.current_view
         self.current_view = name
 
-        # Reset butons
-        for btn in [self.btn_dash, self.btn_vk, self.btn_tg, self.btn_logs]:
-            btn.configure(**button_style(self.theme, "nav"))
-
-        # Highlight active
         btn_map = {
             "dashboard": self.btn_dash,
             "vk": self.btn_vk,
             "tg": self.btn_tg,
             "logs": self.btn_logs,
         }
+
+        if previous_view and previous_view in btn_map:
+            btn_map[previous_view].configure(**self._nav_style)
         if name in btn_map:
-            btn_map[name].configure(**button_style(self.theme, "nav_active"))
+            btn_map[name].configure(**self._nav_active_style)
 
         title_key, subtitle_key = self.view_titles.get(
             name, ("dashboard.title", "dashboard.subtitle")
@@ -394,10 +408,17 @@ class AppWindow(ctk.CTk):
         self.lbl_section.configure(text=self.i18n.t(title_key))
         self.lbl_section_sub.configure(text=self.i18n.t(subtitle_key))
 
-        target_view = self.views[name]
+        # Hide previous view entirely from geometry manager
+        if previous_view and previous_view in self.views:
+            self.views[previous_view].grid_forget()
+
+        # Create or get target view, and grid it
+        target_view = self._get_or_create_view(name)
+        if target_view is None:
+            return
         self._ensure_view_language(name)
-        target_view.tkraise()
-        if previous_view != name and hasattr(target_view, "on_show"):
+        target_view.grid(row=0, column=0, sticky="nsew")
+        if hasattr(target_view, "on_show"):
             target_view.on_show()
 
         if name == "logs":
@@ -447,11 +468,14 @@ class AppWindow(ctk.CTk):
         if event.widget is not self:
             return
 
-        window_size = (self.winfo_width(), self.winfo_height())
+        w = self.winfo_width()
+        h = self.winfo_height()
+        window_size = (w, h)
         if window_size == self._last_window_size:
             return
 
         self._last_window_size = window_size
+        set_resize_lock(True)
 
         if self._resize_restore_id is not None:
             try:
@@ -466,6 +490,8 @@ class AppWindow(ctk.CTk):
 
     def _finish_window_resize(self):
         self._resize_restore_id = None
+        set_resize_lock(False)
+        flush_pending_wraps()
 
     def _ensure_view_language(self, name, force=False):
         if name not in self.views:
@@ -480,7 +506,8 @@ class AppWindow(ctk.CTk):
         self._views_language_state[name] = self.i18n.language
 
     def on_scan_complete(self, playlists):
-        self.views["vk"].update_playlists(playlists)
+        if "vk" in self.views:
+            self.views["vk"].update_playlists(playlists)
         if "tg" in self.views and hasattr(
             self.views["tg"], "set_yandex_collection_status"
         ):
@@ -499,7 +526,8 @@ class AppWindow(ctk.CTk):
 
     def on_login_success(self):
         self.log_message(self.i18n.t("app.login.success"))
-        self.views["vk"].set_connected_status(True)
+        if "vk" in self.views:
+            self.views["vk"].set_connected_status(True)
         if "tg" in self.views and hasattr(self.views["tg"], "set_vk_connected_status"):
             self.views["tg"].set_vk_connected_status(True)
 
@@ -508,7 +536,8 @@ class AppWindow(ctk.CTk):
         self.log_message(msg)
 
     def get_strategy_from_ui(self):
-        return self.views["tg"].get_strategy()
+        tg_view = self._get_or_create_view("tg")
+        return tg_view.get_strategy()
 
     def on_language_change(self, value):
         language = "ru" if value == "RU" else "en"
@@ -520,6 +549,8 @@ class AppWindow(ctk.CTk):
             self.controller.set_language(language)
 
     def apply_language(self):
+        set_resize_lock(True)
+
         self.title(self.i18n.t("app.title"))
         self._set_language_buttons(self.i18n.language)
         self.lbl_logo.configure(text=self.i18n.t("app.logo"))
@@ -546,9 +577,16 @@ class AppWindow(ctk.CTk):
 
         for view_name in self.views:
             self._views_language_state[view_name] = None
+        # Also mark uncreated views as needing language update
+        for view_name in self._view_constructors:
+            if view_name not in self.views:
+                self._views_language_state[view_name] = None
 
         if self.current_view is not None:
             self._ensure_view_language(self.current_view, force=True)
+
+        set_resize_lock(False)
+        flush_pending_wraps()
 
     def update_stats_loop(self):
         if self._is_closing or not self._window_alive():
@@ -561,6 +599,7 @@ class AppWindow(ctk.CTk):
 
     def on_close(self):
         self._is_closing = True
+        set_resize_lock(False)
         self._cancel_after_callbacks()
         try:
             self._stats_executor.shutdown(wait=False, cancel_futures=True)

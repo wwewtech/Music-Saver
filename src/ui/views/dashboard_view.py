@@ -1,8 +1,9 @@
 import os
+import tkinter as tk
 
 import customtkinter as ctk
 
-from src.ui.components.primitives import EmptyState, MetricTile, SectionHeader, StatusBadge, Surface
+from src.ui.components.primitives import EmptyState, MetricTile, SectionHeader, StatusBadge, Surface, set_resize_lock, flush_pending_wraps
 from src.ui.design_system import button_style, ui_font
 
 
@@ -54,7 +55,7 @@ class DashboardView(ctk.CTkFrame):
 
         self.badge_rows = {}
         for key in ("source", "telegram", "storage"):
-            row = ctk.CTkFrame(self.readiness_card, fg_color="transparent")
+            row = tk.Frame(self.readiness_card, bg=self.theme["panel"])
             row.pack(fill="x", padx=18, pady=5)
             label = ctk.CTkLabel(
                 row,
@@ -68,7 +69,7 @@ class DashboardView(ctk.CTkFrame):
             badge.pack(side="right")
             self.badge_rows[key] = (label, badge)
 
-        self.metrics_row = ctk.CTkFrame(self.container, fg_color="transparent")
+        self.metrics_row = tk.Frame(self.container, bg=self.theme["page_bg"])
         self.metrics_row.grid(row=1, column=0, columnspan=2, sticky="ew", pady=8)
         for column in range(3):
             self.metrics_row.grid_columnconfigure(column, weight=1)
@@ -170,6 +171,7 @@ class DashboardView(ctk.CTkFrame):
             self.action_buttons.append((key, title, body, button))
 
     def apply_language(self):
+        set_resize_lock(True)
         self.hero_card.set_label(self.i18n.t("dashboard.hero.title"))
         self.hero_card.set_description(self.i18n.t("dashboard.hero.subtitle"))
         self.readiness_header.configure_content(
@@ -197,6 +199,8 @@ class DashboardView(ctk.CTkFrame):
             title.configure(text=self.i18n.t(f"{key}.title"))
             body.configure(text=self.i18n.t(f"{key}.body"))
             button.configure(text=self.i18n.t(f"{key}.cta"))
+        set_resize_lock(False)
+        flush_pending_wraps()
         if self._last_stats is not None:
             self.apply_stats(self._last_stats, force=True)
 

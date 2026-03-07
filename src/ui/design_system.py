@@ -49,12 +49,20 @@ def get_theme():
     }
 
 
+_font_cache = {}
+
+
 def ui_font(theme, size, weight="normal", alt=False, mono=False):
     if mono:
         family = theme["font_mono"]
     else:
         family = theme["font_alt"] if alt else theme["font"]
-    return ctk.CTkFont(family=family, size=size, weight=weight)
+    key = (family, size, weight)
+    cached = _font_cache.get(key)
+    if cached is None:
+        cached = ctk.CTkFont(family=family, size=size, weight=weight)
+        _font_cache[key] = cached
+    return cached
 
 
 def surface_style(theme, variant="surface"):

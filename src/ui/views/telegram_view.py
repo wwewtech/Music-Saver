@@ -1,5 +1,6 @@
+import tkinter as tk
 import customtkinter as ctk
-from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap
+from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap, set_resize_lock, flush_pending_wraps
 from src.ui.design_system import button_style, combo_style, entry_style, ui_font
 
 
@@ -90,7 +91,7 @@ class TelegramView(ctk.CTkFrame):
         self.lbl_vk = self.vk_header.title
         self.lbl_vk_tip = self.vk_header.description
 
-        vk_btn_row = ctk.CTkFrame(vk_frame, fg_color="transparent")
+        vk_btn_row = tk.Frame(vk_frame, bg=self.theme["surface"])
         vk_btn_row.pack(fill="x", padx=12, pady=(0, 14))
         vk_btn_row.grid_columnconfigure(0, weight=1)
         vk_btn_row.grid_columnconfigure(1, weight=1)
@@ -140,7 +141,7 @@ class TelegramView(ctk.CTkFrame):
         self.lbl_ym = self.ym_header.title
         self.lbl_ym_tip = self.ym_header.description
 
-        ym_btn_row = ctk.CTkFrame(ym_frame, fg_color="transparent")
+        ym_btn_row = tk.Frame(ym_frame, bg=self.theme["surface"])
         ym_btn_row.pack(fill="x", padx=12, pady=(0, 14))
         ym_btn_row.grid_columnconfigure(0, weight=1)
 
@@ -193,7 +194,7 @@ class TelegramView(ctk.CTkFrame):
         self.entry_chat_id.insert(0, curr.get("tg_chat_id", "") or "")
 
         # Save & Test
-        btn_frame = ctk.CTkFrame(conn_frame, fg_color="transparent")
+        btn_frame = tk.Frame(conn_frame, bg=self.theme["panel"])
         btn_frame.pack(fill="x", padx=14, pady=(4, 14))
         btn_frame.grid_columnconfigure(0, weight=1)
         btn_frame.grid_columnconfigure(1, weight=1)
@@ -372,6 +373,7 @@ class TelegramView(ctk.CTkFrame):
             self.controller.set_processing_strategy(strategy)
 
     def apply_language(self):
+        set_resize_lock(True)
         selected_source = self.get_selected_source()
         source_values = self._build_source_values()
         selected_code = self.get_strategy()
@@ -416,3 +418,5 @@ class TelegramView(ctk.CTkFrame):
             )
         )
         self.lab_help.configure(text=self.i18n.t("telegram.strategy.help"))
+        set_resize_lock(False)
+        flush_pending_wraps()
