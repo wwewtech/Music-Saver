@@ -1,5 +1,6 @@
 import customtkinter as ctk
-from src.ui.design_system import ui_font, button_style, entry_style, combo_style
+from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap
+from src.ui.design_system import button_style, combo_style, entry_style, ui_font
 
 
 class TelegramView(ctk.CTkFrame):
@@ -19,22 +20,29 @@ class TelegramView(ctk.CTkFrame):
         self.setup_ui()
 
     def setup_ui(self):
-        self.lbl_source_section = ctk.CTkLabel(
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.content = ctk.CTkScrollableFrame(
             self,
-            text=self.i18n.t("telegram.source.section"),
-            font=ui_font(self.theme, 18, "bold"),
-            text_color=self.theme["text"],
+            fg_color="transparent",
+            corner_radius=0,
         )
-        self.lbl_source_section.pack(anchor="w", padx=8, pady=(8, 5))
+        self.content.grid(row=0, column=0, sticky="nsew")
+        self.content.grid_columnconfigure(0, weight=1)
+        self.content.grid_columnconfigure(1, weight=1)
 
-        source_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
+        source_frame = Surface(self.content, self.theme, variant="surface")
+        source_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+        source_frame.grid_columnconfigure(0, weight=1)
+
+        self.source_header = SectionHeader(
+            source_frame,
+            self.theme,
+            self.i18n.t("telegram.source.section"),
+            self.i18n.t("telegram.guide.body"),
+            eyebrow=self.i18n.t("telegram.title"),
         )
-        source_frame.pack(fill="x", padx=6, pady=(0, 12))
+        self.source_header.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 10))
 
         source_values = self._build_source_values()
         self.seg_source = ctk.CTkSegmentedButton(
@@ -44,7 +52,7 @@ class TelegramView(ctk.CTkFrame):
             height=34,
             font=ui_font(self.theme, 12, "bold"),
         )
-        self.seg_source.pack(fill="x", padx=16, pady=(14, 8))
+        self.seg_source.grid(row=1, column=0, sticky="w", padx=16, pady=(0, 8))
 
         initial_source = (
             self.controller.get_preferred_source()
@@ -64,68 +72,28 @@ class TelegramView(ctk.CTkFrame):
             anchor="w",
             wraplength=900,
         )
-        self.lbl_source_hint.pack(fill="x", padx=16, pady=(0, 12))
+        self.lbl_source_hint.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 16))
+        bind_auto_wrap(source_frame, self.lbl_source_hint, horizontal_padding=32, min_wrap=220)
         self._apply_source_hint()
 
-        self.guide_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        self.guide_frame.pack(fill="x", padx=6, pady=(0, 12))
+        vk_frame = Surface(self.content, self.theme, variant="surface")
+        vk_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 8), pady=(0, 12))
 
-        self.lbl_guide_title = ctk.CTkLabel(
-            self.guide_frame,
-            text=self.i18n.t("telegram.guide.title"),
-            font=ui_font(self.theme, 14, "bold", alt=True),
-            text_color=self.theme["text"],
-            anchor="w",
-        )
-        self.lbl_guide_title.pack(fill="x", padx=16, pady=(12, 4))
-
-        self.lbl_guide_body = ctk.CTkLabel(
-            self.guide_frame,
-            text=self.i18n.t("telegram.guide.body"),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 12, alt=True),
-            justify="left",
-            anchor="w",
-            wraplength=900,
-        )
-        self.lbl_guide_body.pack(fill="x", padx=16, pady=(0, 12))
-
-        self.lbl_vk = ctk.CTkLabel(
-            self,
-            text=self.i18n.t("telegram.vk.section"),
-            font=ui_font(self.theme, 18, "bold"),
-            text_color=self.theme["text"],
-        )
-        self.lbl_vk.pack(anchor="w", padx=8, pady=(0, 5))
-
-        vk_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        vk_frame.pack(fill="x", padx=6, pady=(0, 12))
-
-        self.lbl_vk_tip = ctk.CTkLabel(
+        self.vk_header = SectionHeader(
             vk_frame,
-            text=self.i18n.t("telegram.vk.tip"),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 12, alt=True),
-            wraplength=880,
-            justify="left",
-            anchor="w",
+            self.theme,
+            self.i18n.t("telegram.vk.section"),
+            self.i18n.t("telegram.vk.tip"),
         )
-        self.lbl_vk_tip.pack(fill="x", padx=16, pady=(12, 6))
+        self.vk_header.pack(fill="x", padx=16, pady=(16, 8))
+
+        self.lbl_vk = self.vk_header.title
+        self.lbl_vk_tip = self.vk_header.description
 
         vk_btn_row = ctk.CTkFrame(vk_frame, fg_color="transparent")
-        vk_btn_row.pack(fill="x", padx=10, pady=(0, 10))
+        vk_btn_row.pack(fill="x", padx=12, pady=(0, 14))
+        vk_btn_row.grid_columnconfigure(0, weight=1)
+        vk_btn_row.grid_columnconfigure(1, weight=1)
 
         self.btn_vk_login = ctk.CTkButton(
             vk_btn_row,
@@ -135,7 +103,7 @@ class TelegramView(ctk.CTkFrame):
             height=40,
             **button_style(self.theme, "primary"),
         )
-        self.btn_vk_login.pack(side="left", padx=5)
+        self.btn_vk_login.grid(row=0, column=0, padx=5, pady=(0, 8), sticky="ew")
 
         self.btn_vk_scan = ctk.CTkButton(
             vk_btn_row,
@@ -145,46 +113,36 @@ class TelegramView(ctk.CTkFrame):
             height=40,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_vk_scan.pack(side="left", padx=5)
+        self.btn_vk_scan.grid(row=0, column=1, padx=5, pady=(0, 8), sticky="ew")
 
         self.lbl_vk_status = ctk.CTkLabel(
             vk_btn_row,
             text=self.i18n.t("telegram.vk.status.idle"),
             text_color=self.theme["muted"],
             font=ui_font(self.theme, 12, alt=True),
-        )
-        self.lbl_vk_status.pack(side="right", padx=8)
-
-        self.lbl_ym = ctk.CTkLabel(
-            self,
-            text=self.i18n.t("telegram.ym.section"),
-            font=ui_font(self.theme, 18, "bold"),
-            text_color=self.theme["text"],
-        )
-        self.lbl_ym.pack(anchor="w", padx=8, pady=(0, 5))
-
-        ym_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        ym_frame.pack(fill="x", padx=6, pady=(0, 12))
-
-        self.lbl_ym_tip = ctk.CTkLabel(
-            ym_frame,
-            text=self.i18n.t("telegram.ym.tip"),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 12, alt=True),
-            wraplength=880,
-            justify="left",
             anchor="w",
+            justify="left",
         )
-        self.lbl_ym_tip.pack(fill="x", padx=16, pady=(12, 6))
+        self.lbl_vk_status.grid(row=1, column=0, columnspan=2, padx=5, sticky="ew")
+        bind_auto_wrap(vk_btn_row, self.lbl_vk_status, horizontal_padding=12, min_wrap=180)
+
+        ym_frame = Surface(self.content, self.theme, variant="surface")
+        ym_frame.grid(row=1, column=1, sticky="nsew", padx=(8, 0), pady=(0, 12))
+
+        self.ym_header = SectionHeader(
+            ym_frame,
+            self.theme,
+            self.i18n.t("telegram.ym.section"),
+            self.i18n.t("telegram.ym.tip"),
+        )
+        self.ym_header.pack(fill="x", padx=16, pady=(16, 8))
+
+        self.lbl_ym = self.ym_header.title
+        self.lbl_ym_tip = self.ym_header.description
 
         ym_btn_row = ctk.CTkFrame(ym_frame, fg_color="transparent")
-        ym_btn_row.pack(fill="x", padx=10, pady=(0, 10))
+        ym_btn_row.pack(fill="x", padx=12, pady=(0, 14))
+        ym_btn_row.grid_columnconfigure(0, weight=1)
 
         self.btn_ym_scan = ctk.CTkButton(
             ym_btn_row,
@@ -194,33 +152,31 @@ class TelegramView(ctk.CTkFrame):
             height=40,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_ym_scan.pack(side="left", padx=5)
+        self.btn_ym_scan.grid(row=0, column=0, padx=5, pady=(0, 8), sticky="w")
 
         self.lbl_ym_status = ctk.CTkLabel(
             ym_btn_row,
             text=self.i18n.t("telegram.ym.status.idle"),
             text_color=self.theme["muted"],
             font=ui_font(self.theme, 12, alt=True),
+            anchor="w",
+            justify="left",
         )
-        self.lbl_ym_status.pack(side="right", padx=8)
+        self.lbl_ym_status.grid(row=1, column=0, padx=5, sticky="ew")
+        bind_auto_wrap(ym_btn_row, self.lbl_ym_status, horizontal_padding=12, min_wrap=180)
 
-        # --- Connection Settings ---
-        self.lbl_conn = ctk.CTkLabel(
-            self,
-            text=self.i18n.t("telegram.connection"),
-            font=ui_font(self.theme, 18, "bold"),
-            text_color=self.theme["text"],
-        )
-        self.lbl_conn.pack(anchor="w", padx=8, pady=(0, 5))
+        conn_frame = Surface(self.content, self.theme, variant="panel")
+        conn_frame.grid(row=2, column=0, sticky="nsew", padx=(0, 8))
 
-        conn_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["panel"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
+        self.conn_header = SectionHeader(
+            conn_frame,
+            self.theme,
+            self.i18n.t("telegram.connection"),
+            self.i18n.t("telegram.tip"),
         )
-        conn_frame.pack(fill="x", padx=6)
+        self.conn_header.pack(fill="x", padx=16, pady=(16, 8))
+
+        self.lbl_conn = self.conn_header.title
 
         self.lbl_token, self.entry_token = self.create_input(
             conn_frame, self.i18n.t("telegram.token"), show="*"
@@ -229,15 +185,7 @@ class TelegramView(ctk.CTkFrame):
             conn_frame, self.i18n.t("telegram.chat_id")
         )
 
-        self.lbl_tip = ctk.CTkLabel(
-            conn_frame,
-            text=self.i18n.t("telegram.tip"),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 12, alt=True),
-            wraplength=880,
-            justify="left",
-        )
-        self.lbl_tip.pack(anchor="w", padx=20, pady=(0, 10))
+        self.lbl_tip = self.conn_header.description
 
         # Load existing
         curr = self.controller.get_tg_settings()
@@ -246,7 +194,9 @@ class TelegramView(ctk.CTkFrame):
 
         # Save & Test
         btn_frame = ctk.CTkFrame(conn_frame, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=10, pady=10)
+        btn_frame.pack(fill="x", padx=14, pady=(4, 14))
+        btn_frame.grid_columnconfigure(0, weight=1)
+        btn_frame.grid_columnconfigure(1, weight=1)
 
         self.btn_save = ctk.CTkButton(
             btn_frame,
@@ -256,7 +206,7 @@ class TelegramView(ctk.CTkFrame):
             height=40,
             **button_style(self.theme, "primary"),
         )
-        self.btn_save.pack(side="left", padx=5)
+        self.btn_save.grid(row=0, column=0, padx=5, sticky="ew")
         self.btn_test = ctk.CTkButton(
             btn_frame,
             text=self.i18n.t("telegram.test"),
@@ -265,25 +215,20 @@ class TelegramView(ctk.CTkFrame):
             height=40,
             **button_style(self.theme, "warning"),
         )
-        self.btn_test.pack(side="left", padx=5)
+        self.btn_test.grid(row=0, column=1, padx=5, sticky="ew")
 
-        # --- Strategy ---
-        self.lbl_strategy = ctk.CTkLabel(
-            self,
-            text=self.i18n.t("telegram.strategy"),
-            font=ui_font(self.theme, 18, "bold"),
-            text_color=self.theme["text"],
-        )
-        self.lbl_strategy.pack(anchor="w", padx=8, pady=(14, 5))
+        strat_frame = Surface(self.content, self.theme, variant="surface")
+        strat_frame.grid(row=2, column=1, sticky="nsew", padx=(8, 0))
 
-        strat_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
+        self.strategy_header = SectionHeader(
+            strat_frame,
+            self.theme,
+            self.i18n.t("telegram.strategy"),
+            self.i18n.t("telegram.strategy.help"),
         )
-        strat_frame.pack(fill="x", padx=6)
+        self.strategy_header.pack(fill="x", padx=16, pady=(16, 10))
+
+        self.lbl_strategy = self.strategy_header.title
 
         strategy_values = self._build_strategy_values()
 
@@ -298,17 +243,9 @@ class TelegramView(ctk.CTkFrame):
         if initial_strategy not in self.strategy_code_to_label:
             initial_strategy = "download_only"
         self.combo_strategy.set(self.strategy_code_to_label[initial_strategy])
-        self.combo_strategy.pack(fill="x", padx=20, pady=(16, 5))
+        self.combo_strategy.pack(fill="x", padx=16, pady=(0, 8))
 
-        self.lab_help = ctk.CTkLabel(
-            strat_frame,
-            text=self.i18n.t("telegram.strategy.help"),
-            text_color=self.theme["muted"],
-            wraplength=780,
-            justify="left",
-            font=ui_font(self.theme, 12, alt=True),
-        )
-        self.lab_help.pack(anchor="w", padx=20, pady=(0, 20))
+        self.lab_help = self.strategy_header.description
 
     def create_input(self, parent, label, show=None):
         label_widget = ctk.CTkLabel(
@@ -440,7 +377,11 @@ class TelegramView(ctk.CTkFrame):
         selected_code = self.get_strategy()
         new_values = self._build_strategy_values()
 
-        self.lbl_source_section.configure(text=self.i18n.t("telegram.source.section"))
+        self.source_header.configure_content(
+            title=self.i18n.t("telegram.source.section"),
+            description=self.i18n.t("telegram.guide.body"),
+            eyebrow=self.i18n.t("telegram.title"),
+        )
         self.seg_source.configure(values=source_values)
         self.seg_source.set(
             self.source_code_to_label.get(
@@ -448,9 +389,6 @@ class TelegramView(ctk.CTkFrame):
             )
         )
         self._apply_source_hint()
-
-        self.lbl_guide_title.configure(text=self.i18n.t("telegram.guide.title"))
-        self.lbl_guide_body.configure(text=self.i18n.t("telegram.guide.body"))
 
         self.lbl_vk.configure(text=self.i18n.t("telegram.vk.section"))
         self.lbl_vk_tip.configure(text=self.i18n.t("telegram.vk.tip"))

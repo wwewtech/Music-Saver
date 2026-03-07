@@ -5,6 +5,7 @@ import webbrowser
 from queue import Queue, Empty
 
 from src.utils.logger import logger
+from src.ui.components.primitives import SectionHeader, StatusBadge, Surface, bind_auto_wrap
 from src.ui.i18n import I18n
 from src.ui.design_system import (
     get_theme,
@@ -26,40 +27,32 @@ class WizardStep(ctk.CTkFrame):
         self._build_base_ui()
 
     def _build_base_ui(self):
-        self.lbl_title = ctk.CTkLabel(
-            self,
-            text=self.i18n.t(self.title_key),
-            font=ctk.CTkFont(family=self.theme["font"], size=26, weight="bold"),
-            text_color=self.theme["text"],
-            anchor="w",
-        )
-        self.lbl_title.pack(fill="x", padx=10, pady=(8, 0))
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
-        self.lbl_description = ctk.CTkLabel(
+        self.header = SectionHeader(
             self,
-            text=self.i18n.t(self.description_key),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
-            text_color=self.theme["muted"],
-            anchor="w",
-            justify="left",
-            wraplength=640,
+            self.theme,
+            self.i18n.t(self.title_key),
+            self.i18n.t(self.description_key),
+            eyebrow=self.i18n.t(
+                "wizard.progress",
+                current=getattr(self.wizard, "step", 1),
+                total=len(getattr(self.wizard, "steps_map", {1: None, 2: None, 3: None, 4: None})),
+            ),
         )
-        self.lbl_description.pack(fill="x", padx=10, pady=(4, 12))
+        self.header.grid(row=0, column=0, sticky="ew", padx=6, pady=(4, 12))
+        self.lbl_title = self.header.title
+        self.lbl_description = self.header.description
 
-        self.content_card = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=14,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        self.content_card.pack(fill="both", expand=True, padx=4, pady=(0, 10))
+        self.content_card = Surface(self, self.theme, variant="surface")
+        self.content_card.grid(row=1, column=0, sticky="nsew", padx=0, pady=(0, 12))
 
         self.content_frame = ctk.CTkFrame(self.content_card, fg_color="transparent")
         self.content_frame.pack(fill="both", expand=True, padx=18, pady=18)
 
         self.nav_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.nav_frame.pack(fill="x", padx=4)
+        self.nav_frame.grid(row=2, column=0, sticky="ew")
 
         self.btn_back = ctk.CTkButton(
             self.nav_frame,
@@ -106,8 +99,15 @@ class WizardStep(ctk.CTkFrame):
         self.wizard.next_step()
 
     def apply_language(self):
-        self.lbl_title.configure(text=self.i18n.t(self.title_key))
-        self.lbl_description.configure(text=self.i18n.t(self.description_key))
+        self.header.configure_content(
+            title=self.i18n.t(self.title_key),
+            description=self.i18n.t(self.description_key),
+            eyebrow=self.i18n.t(
+                "wizard.progress",
+                current=self.wizard.step,
+                total=len(self.wizard.steps_map),
+            ),
+        )
         self.btn_back.configure(text=self.i18n.t("wizard.back"))
         self.btn_restart.configure(text=self.i18n.t("wizard.restart"))
         self.btn_next.configure(text=self.i18n.t("wizard.next"))
@@ -123,20 +123,38 @@ class WelcomeStep(WizardStep):
         self.enable_next()
 
     def build_content(self):
+        self.hero = Surface(self.content_frame, self.theme, variant="soft")
+        self.hero.pack(fill="x", pady=(4, 14))
+
         self.lbl_content = ctk.CTkLabel(
-            self.content_frame,
+            self.hero,
             text=self.i18n.t("wizard.welcome.content"),
             justify="left",
             anchor="w",
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=22),
+            font=ui_font(self.theme, 18, alt=True),
             text_color=self.theme["text"],
+            wraplength=600,
         )
-        self.lbl_content.pack(anchor="w", pady=20)
+        self.lbl_content.pack(fill="x", padx=18, pady=18)
+        bind_auto_wrap(self.hero, self.lbl_content, horizontal_padding=36, min_wrap=220)
+
+        self.note = ctk.CTkLabel(
+            self.content_frame,
+            text=self.i18n.t("dashboard.tip.body"),
+            justify="left",
+            anchor="w",
+            font=ui_font(self.theme, 12, alt=True),
+            text_color=self.theme["muted"],
+            wraplength=620,
+        )
+        self.note.pack(fill="x")
+        bind_auto_wrap(self.content_frame, self.note, horizontal_padding=12, min_wrap=220)
         self.btn_next.configure(text=self.i18n.t("wizard.start"))
 
     def apply_language(self):
         super().apply_language()
         self.lbl_content.configure(text=self.i18n.t("wizard.welcome.content"))
+        self.note.configure(text=self.i18n.t("dashboard.tip.body"))
         self.btn_next.configure(text=self.i18n.t("wizard.start"))
 
     def reset_state(self):
@@ -150,30 +168,43 @@ class VKAuthStep(WizardStep):
         self.build_content()
 
     def build_content(self):
+        self.status_card = Surface(self.content_frame, self.theme, variant="soft")
+        self.status_card.pack(fill="x", pady=(4, 16))
+
+        self.status_badge = StatusBadge(
+            self.status_card,
+            self.theme,
+            self.i18n.t("wizard.vk.wait"),
+            tone="neutral",
+        )
+        self.status_badge.pack(anchor="w", padx=16, pady=(16, 8))
+
+        self.lbl_status = ctk.CTkLabel(
+            self.status_card,
+            text=self.i18n.t("wizard.vk.wait"),
+            text_color=self.theme["muted"],
+            font=ui_font(self.theme, 13, alt=True),
+            anchor="w",
+            justify="left",
+            wraplength=620,
+        )
+        self.lbl_status.pack(fill="x", padx=16, pady=(0, 16))
+        bind_auto_wrap(self.status_card, self.lbl_status, horizontal_padding=32, min_wrap=220)
+
         self.btn_login = ctk.CTkButton(
             self.content_frame,
             text=self.i18n.t("wizard.vk.login"),
             command=self.do_login,
             height=42,
             corner_radius=10,
-            font=ctk.CTkFont(
-                family=self.theme["font_fallback"], size=13, weight="bold"
-            ),
+            font=ui_font(self.theme, 13, "bold"),
             **button_style(self.theme, "primary"),
         )
-        self.btn_login.pack(anchor="w", pady=(10, 16))
-
-        self.lbl_status = ctk.CTkLabel(
-            self.content_frame,
-            text=self.i18n.t("wizard.vk.wait"),
-            text_color=self.theme["muted"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=13),
-            anchor="w",
-        )
-        self.lbl_status.pack(fill="x")
+        self.btn_login.pack(anchor="w")
 
     def do_login(self):
         self.lbl_status.configure(text=self.i18n.t("wizard.vk.launch"))
+        self.status_badge.configure_tone("warning", self.i18n.t("wizard.vk.login"))
         self.btn_login.configure(state="disabled")
         self.wizard.controller.start_browser_and_login()
 
@@ -181,6 +212,7 @@ class VKAuthStep(WizardStep):
         self.lbl_status.configure(
             text=self.i18n.t("wizard.vk.success"), text_color=self.theme["success"]
         )
+        self.status_badge.configure_tone("success", self.i18n.t("app.status.connected"))
         self.enable_next()
 
     def apply_language(self):
@@ -190,12 +222,14 @@ class VKAuthStep(WizardStep):
             self.lbl_status.configure(
                 text=self.i18n.t("wizard.vk.wait"), text_color=self.theme["muted"]
             )
+            self.status_badge.configure_tone("neutral", self.i18n.t("wizard.vk.wait"))
 
     def reset_state(self):
         self.btn_login.configure(state="normal")
         self.lbl_status.configure(
             text=self.i18n.t("wizard.vk.wait"), text_color=self.theme["muted"]
         )
+        self.status_badge.configure_tone("neutral", self.i18n.t("wizard.vk.wait"))
         self.btn_next.configure(state="disabled", text=self.i18n.t("wizard.next"))
 
 
@@ -217,30 +251,21 @@ class TelegramStep(WizardStep):
         self.mode_label_to_code = {}
         self.mode_code_to_label = {}
 
-        self.lbl_mode = ctk.CTkLabel(
-            self.step_scroll,
-            text=self.i18n.t("wizard.tg.mode"),
-            font=ctk.CTkFont(
-                family=self.theme["font_fallback"], size=13, weight="bold"
-            ),
-            text_color=self.theme["text"],
-            anchor="w",
-        )
-        self.lbl_mode.pack(fill="x", pady=(0, 4))
+        self.mode_card = Surface(self.step_scroll, self.theme, variant="soft")
+        self.mode_card.pack(fill="x", pady=(0, 12))
 
-        self.lbl_mode_hint = ctk.CTkLabel(
-            self.step_scroll,
-            text=self.i18n.t("wizard.tg.mode.hint"),
-            text_color=self.theme["muted"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12),
-            justify="left",
-            anchor="w",
-            wraplength=620,
+        self.mode_header = SectionHeader(
+            self.mode_card,
+            self.theme,
+            self.i18n.t("wizard.tg.mode"),
+            self.i18n.t("wizard.tg.mode.hint"),
         )
-        self.lbl_mode_hint.pack(fill="x", pady=(0, 8))
+        self.mode_header.pack(fill="x", padx=16, pady=(16, 10))
+        self.lbl_mode = self.mode_header.title
+        self.lbl_mode_hint = self.mode_header.description
 
         self.seg_mode = ctk.CTkSegmentedButton(
-            self.step_scroll,
+            self.mode_card,
             values=self._build_mode_values(),
             command=self.on_mode_change,
             selected_color=self.theme["accent"],
@@ -249,7 +274,7 @@ class TelegramStep(WizardStep):
             unselected_hover_color=self.theme["nav_hover"],
             text_color=self.theme["text"],
         )
-        self.seg_mode.pack(fill="x", pady=(0, 8))
+        self.seg_mode.pack(fill="x", padx=16, pady=(0, 8))
 
         initial_mode = (
             self.wizard.controller.get_processing_strategy()
@@ -262,46 +287,69 @@ class TelegramStep(WizardStep):
             )
         )
 
+        self.mode_state_badge = StatusBadge(
+            self.mode_card,
+            self.theme,
+            "",
+            tone="neutral",
+        )
+        self.mode_state_badge.pack(anchor="w", padx=16, pady=(0, 8))
+
         self.lbl_mode_state = ctk.CTkLabel(
-            self.step_scroll,
+            self.mode_card,
             text="",
             text_color=self.theme["muted"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12),
+            font=ui_font(self.theme, 12, alt=True),
             anchor="w",
             justify="left",
             wraplength=620,
         )
-        self.lbl_mode_state.pack(fill="x", pady=(0, 10))
+        self.lbl_mode_state.pack(fill="x", padx=16, pady=(0, 16))
+        bind_auto_wrap(self.mode_card, self.lbl_mode_state, horizontal_padding=32, min_wrap=220)
+
+        self.credentials_card = Surface(self.step_scroll, self.theme, variant="surface")
+        self.credentials_card.pack(fill="x", pady=(0, 12))
+
+        self.credentials_header = SectionHeader(
+            self.credentials_card,
+            self.theme,
+            self.i18n.t("wizard.tg.title"),
+            self.i18n.t("wizard.tg.tip"),
+        )
+        self.credentials_header.pack(fill="x", padx=16, pady=(16, 10))
 
         self.entry_token = ctk.CTkEntry(
-            self.step_scroll,
+            self.credentials_card,
             placeholder_text=self.i18n.t("wizard.tg.token"),
             height=38,
             **entry_style(self.theme),
         )
-        self.entry_token.pack(fill="x", pady=(6, 8))
+        self.entry_token.pack(fill="x", padx=16, pady=(0, 8))
 
         self.entry_chat_id = ctk.CTkEntry(
-            self.step_scroll,
+            self.credentials_card,
             placeholder_text=self.i18n.t("wizard.tg.chat"),
             height=38,
             **entry_style(self.theme),
         )
-        self.entry_chat_id.pack(fill="x", pady=(0, 8))
+        self.entry_chat_id.pack(fill="x", padx=16, pady=(0, 8))
 
         self.lbl_tip = ctk.CTkLabel(
-            self.step_scroll,
+            self.credentials_card,
             text=self.i18n.t("wizard.tg.tip"),
             text_color=self.theme["muted"],
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12),
+            font=ui_font(self.theme, 12, alt=True),
             anchor="w",
             justify="left",
             wraplength=620,
         )
-        self.lbl_tip.pack(fill="x", pady=(0, 14))
+        self.lbl_tip.pack(fill="x", padx=16, pady=(0, 14))
+        bind_auto_wrap(self.credentials_card, self.lbl_tip, horizontal_padding=32, min_wrap=220)
 
-        btn_row = ctk.CTkFrame(self.step_scroll, fg_color="transparent")
-        btn_row.pack(fill="x")
+        btn_row = ctk.CTkFrame(self.credentials_card, fg_color="transparent")
+        btn_row.pack(fill="x", padx=16, pady=(0, 16))
+        btn_row.grid_columnconfigure(0, weight=1)
+        btn_row.grid_columnconfigure(1, weight=1)
 
         self.btn_test = ctk.CTkButton(
             btn_row,
@@ -311,7 +359,7 @@ class TelegramStep(WizardStep):
             height=40,
             **button_style(self.theme, "warning"),
         )
-        self.btn_test.pack(side="left")
+        self.btn_test.grid(row=0, column=0, sticky="ew")
 
         self.btn_help = ctk.CTkButton(
             btn_row,
@@ -322,7 +370,7 @@ class TelegramStep(WizardStep):
             width=140,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_help.pack(side="left", padx=(8, 0))
+        self.btn_help.grid(row=0, column=1, padx=(8, 0), sticky="ew")
 
         self._build_help_panel()
 
@@ -375,11 +423,17 @@ class TelegramStep(WizardStep):
                 text=self.i18n.t("wizard.tg.mode.required"),
                 text_color=self.theme["warning"],
             )
+            self.mode_state_badge.configure_tone(
+                "warning", self.i18n.t("telegram.test")
+            )
             self.btn_next.configure(state="disabled", text=self.i18n.t("wizard.next"))
         else:
             self.lbl_mode_state.configure(
                 text=self.i18n.t("wizard.tg.mode.local"),
                 text_color=self.theme["success"],
+            )
+            self.mode_state_badge.configure_tone(
+                "success", self.i18n.t("dashboard.readiness.local")
             )
             self.enable_next()
             self.btn_next.configure(text=self.i18n.t("wizard.next"))
@@ -390,38 +444,22 @@ class TelegramStep(WizardStep):
         self.on_next()
 
     def _build_help_panel(self):
-        self.help_panel = ctk.CTkFrame(
-            self.step_scroll,
-            fg_color=self.theme["surface"],
-            border_width=1,
-            border_color=self.theme["border"],
-            corner_radius=12,
-        )
+        self.help_panel = Surface(self.step_scroll, self.theme, variant="soft")
 
-        self.lbl_help_title = ctk.CTkLabel(
+        self.help_header = SectionHeader(
             self.help_panel,
-            text=self.i18n.t("wizard.tg.help.title"),
-            font=ctk.CTkFont(
-                family=self.theme["font_fallback"], size=14, weight="bold"
-            ),
-            text_color=self.theme["text"],
-            anchor="w",
+            self.theme,
+            self.i18n.t("wizard.tg.help.title"),
+            self.i18n.t("wizard.tg.help.subtitle"),
         )
-        self.lbl_help_title.pack(fill="x", padx=12, pady=(10, 2))
-
-        self.lbl_help_subtitle = ctk.CTkLabel(
-            self.help_panel,
-            text=self.i18n.t("wizard.tg.help.subtitle"),
-            font=ctk.CTkFont(family=self.theme["font_fallback"], size=12),
-            text_color=self.theme["muted"],
-            anchor="w",
-            justify="left",
-            wraplength=600,
-        )
-        self.lbl_help_subtitle.pack(fill="x", padx=12, pady=(0, 8))
+        self.help_header.pack(fill="x", padx=12, pady=(12, 8))
+        self.lbl_help_title = self.help_header.title
+        self.lbl_help_subtitle = self.help_header.description
 
         links_row = ctk.CTkFrame(self.help_panel, fg_color="transparent")
         links_row.pack(fill="x", padx=12, pady=(0, 8))
+        links_row.grid_columnconfigure(0, weight=1)
+        links_row.grid_columnconfigure(1, weight=1)
 
         self.btn_open_botfather = ctk.CTkButton(
             links_row,
@@ -431,7 +469,7 @@ class TelegramStep(WizardStep):
             height=32,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_open_botfather.pack(side="left")
+        self.btn_open_botfather.grid(row=0, column=0, sticky="ew")
 
         self.btn_open_getmyid = ctk.CTkButton(
             links_row,
@@ -441,7 +479,7 @@ class TelegramStep(WizardStep):
             height=32,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_open_getmyid.pack(side="left", padx=(8, 0))
+        self.btn_open_getmyid.grid(row=0, column=1, padx=(8, 0), sticky="ew")
 
         self.stage1_title, self.stage1_steps = self._create_stage_card(
             self.help_panel,
@@ -471,9 +509,7 @@ class TelegramStep(WizardStep):
             ],
         )
 
-        checklist = ctk.CTkFrame(
-            self.help_panel, fg_color=self.theme["surface_alt"], corner_radius=10
-        )
+        checklist = Surface(self.help_panel, self.theme, variant="emphasis")
         checklist.pack(fill="x", padx=12, pady=(4, 12))
 
         self.lbl_checklist = ctk.CTkLabel(
@@ -566,6 +602,7 @@ class TelegramStep(WizardStep):
                 wraplength=600,
             )
             step.pack(fill="x", padx=10, pady=(0, 2))
+            bind_auto_wrap(card, step, horizontal_padding=20, min_wrap=220)
             step_labels.append((step, step_key))
 
         return (title, title_key), step_labels
@@ -697,14 +734,29 @@ class StorageStep(WizardStep):
         self.build_content()
 
     def build_content(self):
+        self.path_card = Surface(self.content_frame, self.theme, variant="soft")
+        self.path_card.pack(fill="x", pady=(4, 14))
+
         self.entry_path = ctk.CTkEntry(
-            self.content_frame,
+            self.path_card,
             placeholder_text=self.i18n.t("wizard.storage.path"),
             height=38,
             **entry_style(self.theme),
         )
-        self.entry_path.pack(fill="x", pady=(12, 10))
+        self.entry_path.pack(fill="x", padx=16, pady=(16, 10))
         self.entry_path.insert(0, "data/downloads")
+
+        self.lbl_storage_hint = ctk.CTkLabel(
+            self.path_card,
+            text=self.i18n.t("wizard.storage.desc"),
+            text_color=self.theme["muted"],
+            font=ui_font(self.theme, 12, alt=True),
+            justify="left",
+            anchor="w",
+            wraplength=600,
+        )
+        self.lbl_storage_hint.pack(fill="x", padx=16, pady=(0, 16))
+        bind_auto_wrap(self.path_card, self.lbl_storage_hint, horizontal_padding=32, min_wrap=220)
 
         self.btn_browse = ctk.CTkButton(
             self.content_frame,
@@ -733,6 +785,7 @@ class StorageStep(WizardStep):
     def apply_language(self):
         super().apply_language()
         self.entry_path.configure(placeholder_text=self.i18n.t("wizard.storage.path"))
+        self.lbl_storage_hint.configure(text=self.i18n.t("wizard.storage.desc"))
         self.btn_browse.configure(text=self.i18n.t("wizard.storage.browse"))
         self.btn_next.configure(text=self.i18n.t("wizard.finish"))
 
@@ -742,6 +795,11 @@ class StorageStep(WizardStep):
 
 
 class SetupWizard(ctk.CTk):
+    DEFAULT_WIDTH = 820
+    DEFAULT_HEIGHT = 640
+    MIN_WIDTH = 720
+    MIN_HEIGHT = 540
+
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
@@ -753,13 +811,9 @@ class SetupWizard(ctk.CTk):
         )
 
         self.title(self.i18n.t("wizard.title"))
-        self.geometry("760x560")
-        self.resizable(False, False)
-        self.configure(fg_color=self.theme["bg"])
-
-        center_x = self.winfo_screenwidth() // 2 - 380
-        center_y = self.winfo_screenheight() // 2 - 280
-        self.geometry(f"+{center_x}+{center_y}")
+        self.configure(fg_color=self.theme["page_bg"])
+        self.resizable(True, True)
+        self._configure_window_geometry()
 
         self.original_on_log = self.controller.on_log
         self.original_on_login_success = self.controller.on_login_success
@@ -773,18 +827,22 @@ class SetupWizard(ctk.CTk):
         )
 
         self.step = 1
+        self._step_language_state = {}
 
-        self.container = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["panel"],
-            corner_radius=18,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
+        self.container = Surface(self, self.theme, variant="panel")
         self.container.pack(fill="both", expand=True, padx=18, pady=18)
 
         top_row = ctk.CTkFrame(self.container, fg_color="transparent")
         top_row.pack(fill="x", padx=14, pady=(14, 0))
+
+        self.header = SectionHeader(
+            top_row,
+            self.theme,
+            self.i18n.t("wizard.title"),
+            self.i18n.t("wizard.welcome.desc"),
+            eyebrow=self.i18n.t("app.header.caption"),
+        )
+        self.header.pack(side="left", fill="x", expand=True)
 
         self.lbl_progress = ctk.CTkLabel(
             top_row,
@@ -792,10 +850,20 @@ class SetupWizard(ctk.CTk):
             text_color=self.theme["muted"],
             font=ui_font(self.theme, 12, "bold", alt=True),
         )
-        self.lbl_progress.pack(side="left")
+        self.lbl_progress.pack(side="left", padx=(14, 0), pady=(4, 0))
+
+        self.progress_bar = ctk.CTkProgressBar(
+            self.container,
+            height=8,
+            corner_radius=999,
+            fg_color=self.theme["surface_emphasis"],
+            progress_color=self.theme["accent"],
+        )
+        self.progress_bar.pack(fill="x", padx=14, pady=(12, 6))
+        self.progress_bar.set(0.25)
 
         self.lang_switch = ctk.CTkFrame(
-            top_row, fg_color=self.theme["surface"], corner_radius=10
+            top_row, fg_color=self.theme["surface_emphasis"], corner_radius=12
         )
         self.lang_switch.pack(side="right")
 
@@ -824,6 +892,8 @@ class SetupWizard(ctk.CTk):
 
         self.steps_host = ctk.CTkFrame(self.container, fg_color="transparent")
         self.steps_host.pack(fill="both", expand=True, padx=14, pady=(6, 14))
+        self.steps_host.grid_rowconfigure(0, weight=1)
+        self.steps_host.grid_columnconfigure(0, weight=1)
 
         self.steps_map = {
             1: WelcomeStep(self.steps_host, self),
@@ -832,10 +902,32 @@ class SetupWizard(ctk.CTk):
             4: StorageStep(self.steps_host, self),
         }
 
+        for step_num, frame in self.steps_map.items():
+            frame.grid(row=0, column=0, sticky="nsew")
+            self._step_language_state[step_num] = self.i18n.language
+
         self.show_step(1)
         self.apply_language()
         self.process_ui_events()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def _configure_window_geometry(self):
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        available_width = max(self.MIN_WIDTH, screen_width - 120)
+        available_height = max(self.MIN_HEIGHT, screen_height - 140)
+
+        min_width = min(self.MIN_WIDTH, available_width)
+        min_height = min(self.MIN_HEIGHT, available_height)
+        width = min(self.DEFAULT_WIDTH, available_width)
+        height = min(self.DEFAULT_HEIGHT, available_height)
+
+        self.minsize(min_width, min_height)
+
+        center_x = max((screen_width - width) // 2, 0)
+        center_y = max((screen_height - height) // 2 - 20, 0)
+        self.geometry(f"{width}x{height}+{center_x}+{center_y}")
 
     def _window_alive(self):
         try:
@@ -878,6 +970,14 @@ class SetupWizard(ctk.CTk):
                 "wizard.progress", current=self.step, total=len(self.steps_map)
             )
         )
+        self.progress_bar.set(self.step / len(self.steps_map))
+        current_frame = self.steps_map.get(self.step)
+        if current_frame and hasattr(current_frame, "header"):
+            current_frame.header.configure_content(
+                eyebrow=self.i18n.t(
+                    "wizard.progress", current=self.step, total=len(self.steps_map)
+                )
+            )
 
     def log_handler(self, msg):
         print(f"[Wizard Log] {msg}")
@@ -905,12 +1005,14 @@ class SetupWizard(ctk.CTk):
         self.show_step(1)
 
     def show_step(self, step_num):
+        if step_num not in self.steps_map:
+            return
+
         self.step = step_num
         self._render_progress()
-        for frame in self.steps_map.values():
-            frame.pack_forget()
         current_frame = self.steps_map[step_num]
-        current_frame.pack(fill="both", expand=True)
+        self._ensure_step_language(step_num)
+        current_frame.tkraise()
         if hasattr(current_frame, "btn_back"):
             if step_num == 1:
                 current_frame.btn_back.pack_forget()
@@ -921,6 +1023,17 @@ class SetupWizard(ctk.CTk):
                 if not current_frame.btn_restart.winfo_manager():
                     current_frame.btn_restart.pack(side="left", padx=(8, 0))
                 current_frame.btn_back.configure(state="normal")
+
+    def _ensure_step_language(self, step_num, force=False):
+        if step_num not in self.steps_map:
+            return
+
+        if not force and self._step_language_state.get(step_num) == self.i18n.language:
+            return
+
+        frame = self.steps_map[step_num]
+        frame.apply_language()
+        self._step_language_state[step_num] = self.i18n.language
 
     def _set_language_buttons(self, language):
         active_style = button_style(self.theme, "primary")
@@ -945,9 +1058,15 @@ class SetupWizard(ctk.CTk):
     def apply_language(self):
         self.title(self.i18n.t("wizard.title"))
         self._set_language_buttons(self.i18n.language)
+        self.header.configure_content(
+            title=self.i18n.t("wizard.title"),
+            description=self.i18n.t("wizard.welcome.desc"),
+            eyebrow=self.i18n.t("app.header.caption"),
+        )
         self._render_progress()
-        for frame in self.steps_map.values():
-            frame.apply_language()
+        for step_num in self.steps_map:
+            self._step_language_state[step_num] = None
+        self._ensure_step_language(self.step, force=True)
 
     def finish(self):
         self.controller.settings_manager.set("setup_completed", True)

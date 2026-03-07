@@ -2,9 +2,9 @@ import customtkinter as ctk
 from tkinter import TclError
 from queue import Queue, Empty
 from concurrent.futures import ThreadPoolExecutor
-import time
 import os
 from src.config import RESOURCE_DIR
+from src.ui.components.primitives import SectionHeader, StatusBadge, Surface
 from src.ui.views.dashboard_view import DashboardView
 from src.ui.views.downloader_view import DownloaderView
 from src.ui.views.telegram_view import TelegramView
@@ -19,6 +19,10 @@ class AppWindow(ctk.CTk):
     MAX_UI_EVENTS_PER_TICK = 50
     RESIZE_SETTLE_MS = 150
     PENDING_LOGS_MAX = 2000
+    DEFAULT_WIDTH = 1320
+    DEFAULT_HEIGHT = 880
+    MIN_WIDTH = 980
+    MIN_HEIGHT = 680
 
     def __init__(self, controller):
         super().__init__()
@@ -38,10 +42,10 @@ class AppWindow(ctk.CTk):
         self._stats_fetch_in_progress = False
         self._stats_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ui-stats")
         self._pending_logs = []
-        self._resize_frozen = False
         self._resize_restore_id = None
-        self._last_resize_ts = 0.0
-        self.current_view = "dashboard"
+        self._last_window_size = None
+        self._views_language_state = {}
+        self.current_view = None
         self.view_titles = {
             "dashboard": ("dashboard.title", "dashboard.subtitle"),
             "vk": ("downloader.title", "downloader.subtitle"),
@@ -50,9 +54,8 @@ class AppWindow(ctk.CTk):
         }
 
         self.title(self.i18n.t("app.title"))
-        self.geometry("1240x820")
-        self.minsize(1120, 760)
-        self.configure(fg_color=self.theme["bg"])
+        self.configure(fg_color=self.theme["page_bg"])
+        self._configure_window_geometry()
 
         # Установка иконки приложения
         icon_path = os.path.join(RESOURCE_DIR, "resources", "VKMusicSaver.ico")
@@ -92,6 +95,24 @@ class AppWindow(ctk.CTk):
         self.update_stats_loop()
         self.process_ui_events()
 
+    def _configure_window_geometry(self):
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        available_width = max(self.MIN_WIDTH, screen_width - 80)
+        available_height = max(self.MIN_HEIGHT, screen_height - 100)
+
+        min_width = min(self.MIN_WIDTH, available_width)
+        min_height = min(self.MIN_HEIGHT, available_height)
+        width = min(self.DEFAULT_WIDTH, available_width)
+        height = min(self.DEFAULT_HEIGHT, available_height)
+
+        self.minsize(min_width, min_height)
+
+        pos_x = max((screen_width - width) // 2, 0)
+        pos_y = max((screen_height - height) // 2 - 20, 0)
+        self.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
+
     def _window_alive(self):
         try:
             return bool(self.winfo_exists())
@@ -128,23 +149,31 @@ class AppWindow(ctk.CTk):
                 self._after_ids.discard(after_id)
 
     def setup_sidebar(self):
-        self.sidebar = ctk.CTkFrame(
+        self.sidebar = Surface(
             self,
+            self.theme,
+            variant="panel",
             width=280,
             corner_radius=0,
-            fg_color=self.theme["panel"],
-            border_width=1,
-            border_color=self.theme["border"],
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
         brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        brand_frame.pack(fill="x", padx=18, pady=(28, 10))
+        brand_frame.pack(fill="x", padx=20, pady=(24, 14))
+
+        self.lbl_shell_caption = ctk.CTkLabel(
+            brand_frame,
+            text=self.i18n.t("app.header.caption"),
+            font=ui_font(self.theme, 11, "bold", alt=True),
+            text_color=self.theme["muted"],
+            anchor="w",
+        )
+        self.lbl_shell_caption.pack(fill="x", pady=(0, 6))
 
         self.lbl_logo = ctk.CTkLabel(
             brand_frame,
             text=self.i18n.t("app.logo"),
-            font=ui_font(self.theme, 22, "bold"),
+            font=ui_font(self.theme, 24, "bold"),
             text_color=self.theme["text"],
             anchor="w",
         )
@@ -157,30 +186,36 @@ class AppWindow(ctk.CTk):
             text_color=self.theme["muted"],
             anchor="w",
         )
-        self.lbl_logo_sub.pack(fill="x", pady=(2, 0))
+        self.lbl_logo_sub.pack(fill="x", pady=(4, 0))
 
-        nav_block = ctk.CTkFrame(
-            self.sidebar,
-            fg_color=self.theme["card"],
-            corner_radius=16,
-            border_width=1,
-            border_color=self.theme["border"],
+        nav_block = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        nav_block.pack(fill="x", padx=14, pady=(6, 0))
+
+        self.lbl_nav = ctk.CTkLabel(
+            nav_block,
+            text=self.i18n.t("app.sidebar.nav"),
+            font=ui_font(self.theme, 11, "bold", alt=True),
+            text_color=self.theme["muted"],
+            anchor="w",
         )
-        nav_block.pack(fill="x", padx=14, pady=(16, 10))
+        self.lbl_nav.pack(fill="x", padx=8, pady=(0, 8))
+
+        self.nav_surface = Surface(nav_block, self.theme, variant="soft")
+        self.nav_surface.pack(fill="x")
 
         self.lbl_lang = ctk.CTkLabel(
-            nav_block,
+            self.nav_surface,
             text=self.i18n.t("app.lang"),
             font=ui_font(self.theme, 12, "bold", alt=True),
             text_color=self.theme["muted"],
             anchor="w",
         )
-        self.lbl_lang.pack(fill="x", padx=12, pady=(12, 2))
+        self.lbl_lang.pack(fill="x", padx=14, pady=(14, 4))
 
         self.lang_switch = ctk.CTkFrame(
-            nav_block, fg_color=self.theme["surface"], corner_radius=10
+            self.nav_surface, fg_color=self.theme["surface_emphasis"], corner_radius=12
         )
-        self.lang_switch.pack(fill="x", padx=12, pady=(4, 12))
+        self.lang_switch.pack(fill="x", padx=14, pady=(0, 14))
 
         self.btn_lang_ru = ctk.CTkButton(
             self.lang_switch,
@@ -204,22 +239,49 @@ class AppWindow(ctk.CTk):
         self._set_language_buttons("ru" if self.i18n.language == "ru" else "en")
 
         self.btn_dash = self.create_nav_btn(
-            nav_block, self.i18n.t("nav.dashboard"), "dashboard"
+            self.nav_surface, self.i18n.t("nav.dashboard"), "dashboard"
         )
         self.btn_vk = self.create_nav_btn(
-            nav_block, self.i18n.t("nav.downloader"), "vk"
+            self.nav_surface, self.i18n.t("nav.downloader"), "vk"
         )
-        self.btn_tg = self.create_nav_btn(nav_block, self.i18n.t("nav.telegram"), "tg")
-        self.btn_logs = self.create_nav_btn(nav_block, self.i18n.t("nav.logs"), "logs")
+        self.btn_tg = self.create_nav_btn(
+            self.nav_surface, self.i18n.t("nav.telegram"), "tg"
+        )
+        self.btn_logs = self.create_nav_btn(
+            self.nav_surface, self.i18n.t("nav.logs"), "logs"
+        )
 
-        # Small footer
-        self.lbl_ver = ctk.CTkLabel(
-            self.sidebar,
-            text=self.i18n.t("app.version"),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 11, alt=True),
+        self.side_note = Surface(self.sidebar, self.theme, variant="soft")
+        self.side_note.pack(side="bottom", fill="x", padx=14, pady=14)
+
+        self.lbl_note_title = ctk.CTkLabel(
+            self.side_note,
+            text=self.i18n.t("app.sidebar.note.title"),
+            text_color=self.theme["text_soft"],
+            font=ui_font(self.theme, 12, "bold", alt=True),
+            anchor="w",
         )
-        self.lbl_ver.pack(side="bottom", pady=14)
+        self.lbl_note_title.pack(fill="x", padx=14, pady=(14, 4))
+
+        self.lbl_note_body = ctk.CTkLabel(
+            self.side_note,
+            text=self.i18n.t("app.sidebar.note.body"),
+            text_color=self.theme["muted"],
+            font=ui_font(self.theme, 12, alt=True),
+            justify="left",
+            anchor="w",
+            wraplength=220,
+        )
+        self.lbl_note_body.pack(fill="x", padx=14, pady=(0, 10))
+
+        self.lbl_ver = ctk.CTkLabel(
+            self.side_note,
+            text=self.i18n.t("app.version"),
+            text_color=self.theme["muted_soft"],
+            font=ui_font(self.theme, 11, alt=True),
+            anchor="w",
+        )
+        self.lbl_ver.pack(fill="x", padx=14, pady=(0, 14))
 
     def create_nav_btn(self, parent, text, view_name):
         nav_style = button_style(self.theme, "nav")
@@ -230,13 +292,15 @@ class AppWindow(ctk.CTk):
             text_color=nav_style["text_color"],
             hover_color=nav_style["hover_color"],
             anchor="w",
-            corner_radius=12,
-            border_spacing=14,
-            height=46,
+            corner_radius=14,
+            border_spacing=16,
+            height=50,
             font=ui_font(self.theme, 14, "bold", alt=True),
             command=lambda: self.show_view(view_name),
+            border_width=nav_style["border_width"],
+            border_color=nav_style["border_color"],
         )
-        btn.pack(fill="x", padx=10, pady=4)
+        btn.pack(fill="x", padx=14, pady=5)
         return btn
 
     def _set_language_buttons(self, language):
@@ -251,38 +315,33 @@ class AppWindow(ctk.CTk):
 
     def setup_views(self):
         self.main_area = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_area.grid(row=0, column=1, sticky="nsew", padx=14, pady=14)
+        self.main_area.grid(row=0, column=1, sticky="nsew", padx=16, pady=16)
         self.main_area.grid_rowconfigure(1, weight=1)
         self.main_area.grid_columnconfigure(0, weight=1)
 
-        self.topbar = ctk.CTkFrame(
-            self.main_area,
-            fg_color=self.theme["surface"],
-            corner_radius=16,
-            border_width=1,
-            border_color=self.theme["border"],
-            height=88,
-        )
+        self.topbar = Surface(self.main_area, self.theme, variant="panel", height=106)
         self.topbar.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         self.topbar.grid_columnconfigure(0, weight=1)
+        self.topbar.grid_columnconfigure(1, weight=0)
 
-        self.lbl_section = ctk.CTkLabel(
+        self.topbar_header = SectionHeader(
             self.topbar,
-            text="",
-            font=ui_font(self.theme, 24, "bold"),
-            text_color=self.theme["text"],
-            anchor="w",
+            self.theme,
+            "",
+            "",
+            eyebrow=self.i18n.t("app.header.caption"),
         )
-        self.lbl_section.grid(row=0, column=0, sticky="w", padx=18, pady=(14, 0))
+        self.topbar_header.grid(row=0, column=0, sticky="w", padx=18, pady=16)
+        self.lbl_section = self.topbar_header.title
+        self.lbl_section_sub = self.topbar_header.description
 
-        self.lbl_section_sub = ctk.CTkLabel(
+        self.live_badge = StatusBadge(
             self.topbar,
-            text="",
-            font=ui_font(self.theme, 12, alt=True),
-            text_color=self.theme["muted"],
-            anchor="w",
+            self.theme,
+            self.i18n.t("app.topbar.live"),
+            tone="info",
         )
-        self.lbl_section_sub.grid(row=1, column=0, sticky="w", padx=18, pady=(0, 12))
+        self.live_badge.grid(row=0, column=1, sticky="e", padx=18, pady=18)
 
         self.view_container = ctk.CTkFrame(self.main_area, fg_color="transparent")
         self.view_container.grid(row=1, column=0, sticky="nsew")
@@ -301,14 +360,19 @@ class AppWindow(ctk.CTk):
         )
         self.views["logs"] = LogsView(self.view_container, self.i18n, self.theme)
 
+        for name, view in self.views.items():
+            view.grid(row=0, column=0, sticky="nsew")
+            self._views_language_state[name] = self.i18n.language
+
         # Init default
         self.show_view("dashboard")
 
     def show_view(self, name):
+        if name not in self.views:
+            return
+
+        previous_view = self.current_view
         self.current_view = name
-        # Hide all
-        for v in self.views.values():
-            v.grid_forget()
 
         # Reset butons
         for btn in [self.btn_dash, self.btn_vk, self.btn_tg, self.btn_logs]:
@@ -330,11 +394,11 @@ class AppWindow(ctk.CTk):
         self.lbl_section.configure(text=self.i18n.t(title_key))
         self.lbl_section_sub.configure(text=self.i18n.t(subtitle_key))
 
-        # Show one
         target_view = self.views[name]
-        if hasattr(target_view, "on_show"):
+        self._ensure_view_language(name)
+        target_view.tkraise()
+        if previous_view != name and hasattr(target_view, "on_show"):
             target_view.on_show()
-        target_view.grid(row=0, column=0, sticky="nsew")
 
         if name == "logs":
             self._flush_pending_logs()
@@ -380,19 +444,15 @@ class AppWindow(ctk.CTk):
         self._pending_logs.clear()
 
     def _on_window_configure(self, event):
-        # Only react to the root window resize, ignore child widget Configure events
         if event.widget is not self:
             return
 
-        self._last_resize_ts = time.monotonic()
+        window_size = (self.winfo_width(), self.winfo_height())
+        if window_size == self._last_window_size:
+            return
 
-        # Freeze: remove the heavy view container from layout so CTk
-        # doesn't redraw dozens of canvas widgets on every pixel of drag
-        if not self._resize_frozen:
-            self._resize_frozen = True
-            self.view_container.grid_remove()
+        self._last_window_size = window_size
 
-        # Cancel the previous scheduled restore
         if self._resize_restore_id is not None:
             try:
                 self.after_cancel(self._resize_restore_id)
@@ -400,21 +460,24 @@ class AppWindow(ctk.CTk):
                 pass
             self._resize_restore_id = None
 
-        # Schedule restore after resize activity settles
-        try:
-            self._resize_restore_id = self.after(
-                self.RESIZE_SETTLE_MS, self._restore_after_resize
-            )
-        except TclError:
-            pass
+        self._resize_restore_id = self._schedule_after(
+            self.RESIZE_SETTLE_MS, self._finish_window_resize
+        )
 
-    def _restore_after_resize(self):
-        """Re-show the view container once the user stops dragging."""
+    def _finish_window_resize(self):
         self._resize_restore_id = None
-        self._resize_frozen = False
-        if self._is_closing or not self._window_alive():
+
+    def _ensure_view_language(self, name, force=False):
+        if name not in self.views:
             return
-        self.view_container.grid(row=1, column=0, sticky="nsew")
+
+        if not force and self._views_language_state.get(name) == self.i18n.language:
+            return
+
+        view = self.views[name]
+        if hasattr(view, "apply_language"):
+            view.apply_language()
+        self._views_language_state[name] = self.i18n.language
 
     def on_scan_complete(self, playlists):
         self.views["vk"].update_playlists(playlists)
@@ -461,8 +524,14 @@ class AppWindow(ctk.CTk):
         self._set_language_buttons(self.i18n.language)
         self.lbl_logo.configure(text=self.i18n.t("app.logo"))
         self.lbl_logo_sub.configure(text=self.i18n.t("app.logo.subtitle"))
+        self.lbl_shell_caption.configure(text=self.i18n.t("app.header.caption"))
+        self.lbl_nav.configure(text=self.i18n.t("app.sidebar.nav"))
         self.lbl_lang.configure(text=self.i18n.t("app.lang"))
         self.lbl_ver.configure(text=self.i18n.t("app.version"))
+        self.lbl_note_title.configure(text=self.i18n.t("app.sidebar.note.title"))
+        self.lbl_note_body.configure(text=self.i18n.t("app.sidebar.note.body"))
+        self.topbar_header.configure_content(eyebrow=self.i18n.t("app.header.caption"))
+        self.live_badge.configure_tone("info", self.i18n.t("app.topbar.live"))
 
         self.btn_dash.configure(text=self.i18n.t("nav.dashboard"))
         self.btn_vk.configure(text=self.i18n.t("nav.downloader"))
@@ -475,9 +544,11 @@ class AppWindow(ctk.CTk):
         self.lbl_section.configure(text=self.i18n.t(title_key))
         self.lbl_section_sub.configure(text=self.i18n.t(subtitle_key))
 
-        for view in self.views.values():
-            if hasattr(view, "apply_language"):
-                view.apply_language()
+        for view_name in self.views:
+            self._views_language_state[view_name] = None
+
+        if self.current_view is not None:
+            self._ensure_view_language(self.current_view, force=True)
 
     def update_stats_loop(self):
         if self._is_closing or not self._window_alive():

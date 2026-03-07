@@ -1,5 +1,6 @@
 import customtkinter as ctk
-from src.ui.design_system import ui_font, button_style, checkbox_style
+from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap
+from src.ui.design_system import button_style, checkbox_style, ui_font
 
 
 class DownloaderView(ctk.CTkFrame):
@@ -16,32 +17,14 @@ class DownloaderView(ctk.CTkFrame):
         self.apply_preferred_source()
 
     def setup_ui(self):
-        self.lbl_title = ctk.CTkLabel(
-            self,
-            text=self.i18n.t("downloader.title"),
-            font=ui_font(self.theme, 24, "bold"),
-            text_color=self.theme["text"],
-            anchor="w",
-        )
-        self.lbl_title.pack(fill="x", padx=8, pady=(6, 0))
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
-        self.lbl_subtitle = ctk.CTkLabel(
-            self,
-            text=self.i18n.t("downloader.subtitle"),
-            font=ui_font(self.theme, 12, alt=True),
-            text_color=self.theme["muted"],
-            anchor="w",
-        )
-        self.lbl_subtitle.pack(fill="x", padx=8, pady=(0, 12))
-
-        source_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        source_frame.pack(fill="x", padx=6, pady=(0, 10))
+        source_frame = Surface(self, self.theme, variant="surface")
+        source_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        source_frame.grid_columnconfigure(0, weight=0)
+        source_frame.grid_columnconfigure(1, weight=1)
+        source_frame.grid_columnconfigure(2, weight=0)
 
         self.lbl_source = ctk.CTkLabel(
             source_frame,
@@ -50,7 +33,7 @@ class DownloaderView(ctk.CTkFrame):
             text_color=self.theme["muted"],
             anchor="w",
         )
-        self.lbl_source.pack(side="left", padx=(12, 8), pady=10)
+        self.lbl_source.grid(row=0, column=0, sticky="w", padx=(14, 10), pady=14)
 
         self.source_selector = ctk.CTkSegmentedButton(
             source_frame,
@@ -59,44 +42,62 @@ class DownloaderView(ctk.CTkFrame):
                 self.i18n.t("downloader.source.yandex"),
             ],
             command=self._on_source_changed,
-            height=32,
+            height=34,
             font=ui_font(self.theme, 12, "bold"),
         )
-        self.source_selector.pack(side="left", padx=(0, 12), pady=8)
+        self.source_selector.grid(row=0, column=1, sticky="ew", pady=10)
         self.source_selector.set(self.i18n.t("downloader.source.vk"))
 
-        ctrl_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["panel"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
+        self.lbl_status = ctk.CTkLabel(
+            source_frame,
+            text=self.i18n.t("downloader.status.idle"),
+            text_color=self.theme["muted"],
+            font=ui_font(self.theme, 12, "bold", alt=True),
+            anchor="w",
+            justify="left",
         )
-        ctrl_frame.pack(fill="x", padx=6, pady=(0, 10))
+        self.lbl_status.grid(row=1, column=0, columnspan=3, sticky="ew", padx=14, pady=(0, 14))
+        bind_auto_wrap(source_frame, self.lbl_status, horizontal_padding=28, min_wrap=220)
+
+        body = ctk.CTkFrame(self, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew")
+        body.grid_columnconfigure(0, weight=5)
+        body.grid_columnconfigure(1, weight=3)
+        body.grid_rowconfigure(0, weight=1)
+
+        left_column = ctk.CTkFrame(body, fg_color="transparent")
+        left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        left_column.grid_columnconfigure(0, weight=1)
+        left_column.grid_rowconfigure(1, weight=1)
+
+        self.scan_panel = Surface(left_column, self.theme, variant="panel")
+        self.scan_panel.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        self.scan_panel.grid_columnconfigure(0, weight=1)
+        self.scan_panel.grid_columnconfigure(1, weight=1)
+
+        self.scan_header = SectionHeader(
+            self.scan_panel,
+            self.theme,
+            self.i18n.t("downloader.title"),
+            self.i18n.t("downloader.subtitle"),
+            eyebrow=self.i18n.t("downloader.source"),
+        )
+        self.scan_header.grid(row=0, column=0, columnspan=3, sticky="ew", padx=14, pady=(14, 8))
 
         self.lbl_vk_hint = ctk.CTkLabel(
-            ctrl_frame,
+            self.scan_panel,
             text=self.i18n.t("downloader.vk.settings.hint"),
             text_color=self.theme["muted"],
             font=ui_font(self.theme, 12, alt=True),
             anchor="w",
             justify="left",
+            wraplength=560,
         )
-        self.lbl_vk_hint.pack(side="left", padx=12, pady=12)
-
-        self.btn_scan_yandex = ctk.CTkButton(
-            ctrl_frame,
-            text=self.i18n.t("downloader.scan.yandex"),
-            command=self.controller.scan_yandex_chart,
-            font=ui_font(self.theme, 13, "bold"),
-            corner_radius=10,
-            height=42,
-            **button_style(self.theme, "secondary"),
-        )
-        self.btn_scan_yandex.pack(side="left", padx=8, pady=12)
+        self.lbl_vk_hint.grid(row=1, column=0, columnspan=3, sticky="ew", padx=14, pady=(0, 12))
+        bind_auto_wrap(self.scan_panel, self.lbl_vk_hint, horizontal_padding=28, min_wrap=220)
 
         self.btn_scan_vk = ctk.CTkButton(
-            ctrl_frame,
+            self.scan_panel,
             text=self.i18n.t("downloader.scan.vk"),
             command=self.controller.scan_playlists,
             font=ui_font(self.theme, 13, "bold"),
@@ -104,25 +105,77 @@ class DownloaderView(ctk.CTkFrame):
             height=42,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_scan_vk.pack(side="left", padx=8, pady=12)
+        self.btn_scan_vk.grid(row=2, column=0, sticky="ew", padx=(14, 8), pady=(0, 14))
 
-        self.lbl_status = ctk.CTkLabel(
-            ctrl_frame,
-            text=self.i18n.t("downloader.status.idle"),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 13, alt=True),
+        self.btn_scan_yandex = ctk.CTkButton(
+            self.scan_panel,
+            text=self.i18n.t("downloader.scan.yandex"),
+            command=self.controller.scan_yandex_chart,
+            font=ui_font(self.theme, 13, "bold"),
+            corner_radius=10,
+            height=42,
+            **button_style(self.theme, "secondary"),
         )
-        self.lbl_status.pack(side="right", padx=14)
+        self.btn_scan_yandex.grid(row=2, column=1, sticky="ew", padx=(8, 14), pady=(0, 14))
 
-        opts_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
+        playlist_shell = Surface(left_column, self.theme, variant="panel")
+        playlist_shell.grid(row=1, column=0, sticky="nsew")
+        playlist_shell.grid_rowconfigure(1, weight=1)
+        playlist_shell.grid_columnconfigure(0, weight=1)
+
+        self.playlist_header = SectionHeader(
+            playlist_shell,
+            self.theme,
+            self.i18n.t("downloader.playlists"),
+            self.i18n.t("downloader.count", selected=0, total=0),
+        )
+        self.playlist_header.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 10))
+
+        self.scroll = ctk.CTkScrollableFrame(
+            playlist_shell,
+            label_text="",
+            fg_color=self.theme["panel"],
             corner_radius=12,
             border_width=1,
-            border_color=self.theme["border"],
+            border_color=self.theme["border_soft"],
         )
-        opts_frame.pack(fill="x", padx=6, pady=(0, 10))
+        self.scroll.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 14))
 
+        right_column = ctk.CTkFrame(body, fg_color="transparent")
+        right_column.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        right_column.grid_columnconfigure(0, weight=1)
+
+        summary_card = Surface(right_column, self.theme, variant="surface")
+        summary_card.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        self.summary_header = SectionHeader(
+            summary_card,
+            self.theme,
+            self.i18n.t("downloader.start"),
+            self.i18n.t("downloader.count", selected=0, total=0),
+        )
+        self.summary_header.pack(fill="x", padx=14, pady=(14, 8))
+        self.lbl_selected = ctk.CTkLabel(
+            summary_card,
+            text=self.i18n.t("downloader.count", selected=0, total=0),
+            text_color=self.theme["muted"],
+            font=ui_font(self.theme, 12, alt=True),
+            justify="left",
+            anchor="w",
+        )
+        self.lbl_selected.pack(fill="x", padx=14, pady=(0, 10))
+        self.btn_start = ctk.CTkButton(
+            summary_card,
+            text=self.i18n.t("downloader.start"),
+            height=48,
+            font=ui_font(self.theme, 14, "bold"),
+            command=self.on_start,
+            corner_radius=12,
+            **button_style(self.theme, "success"),
+        )
+        self.btn_start.pack(fill="x", padx=14, pady=(0, 14))
+
+        opts_frame = Surface(right_column, self.theme, variant="surface")
+        opts_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         self.lbl_options = ctk.CTkLabel(
             opts_frame,
             text=self.i18n.t("downloader.options"),
@@ -130,7 +183,7 @@ class DownloaderView(ctk.CTkFrame):
             text_color=self.theme["muted"],
             anchor="w",
         )
-        self.lbl_options.pack(fill="x", padx=12, pady=(10, 0))
+        self.lbl_options.pack(fill="x", padx=14, pady=(14, 4))
 
         self.var_covers = ctk.BooleanVar(value=True)
         self.var_id3 = ctk.BooleanVar(value=True)
@@ -142,7 +195,7 @@ class DownloaderView(ctk.CTkFrame):
             font=ui_font(self.theme, 13, alt=True),
             **checkbox_style(self.theme),
         )
-        self.chk_covers.pack(side="left", padx=12, pady=(6, 10))
+        self.chk_covers.pack(anchor="w", padx=14, pady=(6, 4))
         self.chk_id3 = ctk.CTkCheckBox(
             opts_frame,
             text=self.i18n.t("downloader.id3"),
@@ -150,25 +203,10 @@ class DownloaderView(ctk.CTkFrame):
             font=ui_font(self.theme, 13, alt=True),
             **checkbox_style(self.theme),
         )
-        self.chk_id3.pack(side="left", padx=8, pady=(6, 10))
+        self.chk_id3.pack(anchor="w", padx=14, pady=(0, 14))
 
-        self.lbl_selected = ctk.CTkLabel(
-            opts_frame,
-            text=self.i18n.t("downloader.count", selected=0, total=0),
-            text_color=self.theme["muted"],
-            font=ui_font(self.theme, 12, alt=True),
-        )
-        self.lbl_selected.pack(side="right", padx=12, pady=(6, 10))
-
-        # ── Yandex Music Section ────────────────────────────────────────
-        ym_frame = ctk.CTkFrame(
-            self,
-            fg_color=self.theme["surface"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        ym_frame.pack(fill="x", padx=6, pady=(0, 10))
+        ym_frame = Surface(right_column, self.theme, variant="surface")
+        ym_frame.grid(row=2, column=0, sticky="ew")
 
         self.lbl_ym_header = ctk.CTkLabel(
             ym_frame,
@@ -177,11 +215,11 @@ class DownloaderView(ctk.CTkFrame):
             text_color=self.theme["muted"],
             anchor="w",
         )
-        self.lbl_ym_header.pack(fill="x", padx=12, pady=(10, 4))
+        self.lbl_ym_header.pack(fill="x", padx=14, pady=(14, 4))
 
-        # URL row
         ym_url_row = ctk.CTkFrame(ym_frame, fg_color="transparent")
-        ym_url_row.pack(fill="x", padx=12, pady=(0, 4))
+        ym_url_row.pack(fill="x", padx=14, pady=(0, 14))
+        ym_url_row.grid_columnconfigure(0, weight=1)
 
         self.ym_url_entry = ctk.CTkEntry(
             ym_url_row,
@@ -190,7 +228,7 @@ class DownloaderView(ctk.CTkFrame):
             height=36,
             corner_radius=8,
         )
-        self.ym_url_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.ym_url_entry.grid(row=0, column=0, sticky="ew", pady=(0, 8))
 
         self.btn_ym_scan_url = ctk.CTkButton(
             ym_url_row,
@@ -201,30 +239,7 @@ class DownloaderView(ctk.CTkFrame):
             height=36,
             **button_style(self.theme, "secondary"),
         )
-        self.btn_ym_scan_url.pack(side="left", padx=(0, 0))
-
-        # Playlist Area
-        self.scroll = ctk.CTkScrollableFrame(
-            self,
-            label_text=self.i18n.t("downloader.playlists"),
-            fg_color=self.theme["panel"],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.theme["border"],
-        )
-        self.scroll.pack(fill="both", expand=True, padx=6, pady=0)
-
-        # Action Button
-        self.btn_start = ctk.CTkButton(
-            self,
-            text=self.i18n.t("downloader.start"),
-            height=50,
-            font=ui_font(self.theme, 15, "bold"),
-            command=self.on_start,
-            corner_radius=12,
-            **button_style(self.theme, "success"),
-        )
-        self.btn_start.pack(fill="x", padx=6, pady=(12, 2))
+        self.btn_ym_scan_url.grid(row=1, column=0, sticky="ew")
 
         self._update_source_controls()
 
@@ -393,13 +408,17 @@ class DownloaderView(ctk.CTkFrame):
     def update_selected_counter(self):
         total = len(self.checkboxes)
         selected = sum(1 for _, var, _ in self.checkboxes if var.get())
-        self.lbl_selected.configure(
-            text=self.i18n.t("downloader.count", selected=selected, total=total)
-        )
+        summary = self.i18n.t("downloader.count", selected=selected, total=total)
+        self.lbl_selected.configure(text=summary)
+        self.playlist_header.configure_content(description=summary)
+        self.summary_header.configure_content(description=summary)
 
     def apply_language(self):
-        self.lbl_title.configure(text=self.i18n.t("downloader.title"))
-        self.lbl_subtitle.configure(text=self.i18n.t("downloader.subtitle"))
+        self.scan_header.configure_content(
+            title=self.i18n.t("downloader.title"),
+            description=self.i18n.t("downloader.subtitle"),
+            eyebrow=self.i18n.t("downloader.source"),
+        )
         self.lbl_source.configure(text=self.i18n.t("downloader.source"))
         self.source_selector.configure(
             values=[
@@ -426,7 +445,8 @@ class DownloaderView(ctk.CTkFrame):
         self.chk_covers.configure(text=self.i18n.t("downloader.covers"))
         self.chk_id3.configure(text=self.i18n.t("downloader.id3"))
         self.update_selected_counter()
-        self.scroll.configure(label_text=self.i18n.t("downloader.playlists"))
+        self.playlist_header.configure_content(title=self.i18n.t("downloader.playlists"))
+        self.summary_header.configure_content(title=self.i18n.t("downloader.start"))
         self.btn_start.configure(text=self.i18n.t("downloader.start"))
         self.lbl_ym_header.configure(text=self.i18n.t("downloader.ym.header"))
         self.ym_url_entry.configure(
