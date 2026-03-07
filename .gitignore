@@ -69,3 +69,8 @@ chrome_profile/
 # Binaries (large files, not for git)
 bin/
 
+"bin/" 
+"__pycache__/" 
+"*.pyc" 
+"data/chrome_profile/" 
+"data/downloads/" 
