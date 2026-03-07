@@ -36,16 +36,20 @@ class Tagger:
             return
 
         try:
+            logger.debug(f"Открытие файла для тегирования: {filepath}")
             audio = MP3(filepath, ID3=ID3)
             try:
                 audio.add_tags()
+                logger.debug(f"Добавлены новые ID3 теги для {filepath}")
             except:
+                logger.debug(f"ID3 теги уже существуют в {filepath}")
                 pass
 
             # 1. Text
             title_text = track.title
             if track.subtitle:
                 title_text += f" ({track.subtitle})"
+            logger.debug(f"Установка заголовка: {title_text}")
             audio.tags.add(TIT2(encoding=3, text=title_text))
 
             # Artists
@@ -107,6 +111,7 @@ class Tagger:
 
             # 7. Cover
             if use_covers and track.cover_url:
+                logger.debug(f"Загрузка обложки для {track.id} из {track.cover_url}")
                 try:
                     r = requests.get(track.cover_url, timeout=10)
                     if r.status_code == 200:
@@ -116,6 +121,7 @@ class Tagger:
                             if img_data.startswith(b"\x89PNG")
                             else "image/jpeg"
                         )
+                        logger.debug(f"Обложка получена успешно (MIME: {mime}, размер: {len(img_data)} байт)")
                         audio.tags.add(
                             APIC(
                                 encoding=3,
@@ -125,12 +131,16 @@ class Tagger:
                                 data=img_data,
                             )
                         )
+                    else:
+                        logger.warning(f"Сервер вернул статус {r.status_code} при загрузке обложки.")
                 except Exception as e:
-                    logger.warning(f"Failed to fetch cover: {e}")
+                    logger.warning(f"Ошибка при загрузке обложки: {e}")
 
+            logger.debug(f"Сохранение изменений ID3 в файл: {filepath}")
             audio.save(v2_version=3)
+            logger.info(f"Тегирование завершено успешно: {filepath}")
         except Exception as e:
-            logger.error(f"Tagger Error: {e}")
+            logger.error(f"Критическая ошибка Tagger для {filepath}: {e}")
 
 
 def sanitize_filename(name):

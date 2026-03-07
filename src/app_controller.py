@@ -1,6 +1,10 @@
 import os
 import threading
-from typing import List, Callable
+import time
+from typing import List, Callable, Dict
+
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, APIC
 
 from src.database.repositories import PlaylistRepository, TrackRepository
 from src.database.db_manager import DBManager
@@ -16,7 +20,6 @@ from src.domain.tagger import Tagger, sanitize_filename
 from src.config import DOWNLOAD_DIR
 from src.utils.logger import logger
 
-
 class AppController:
     def __init__(self):
         logger.debug("Инициализация AppController...")
@@ -27,6 +30,7 @@ class AppController:
         
         # Load TG settings
         settings = self.settings_manager.get_settings()
+        logger.debug(f"Загруженные настройки: {settings}")
         self.telegram_service = TelegramService(settings.get('tg_bot_token'), settings.get('tg_chat_id'))
 
         self.driver = None
@@ -42,19 +46,52 @@ class AppController:
         self.on_login_success = lambda: None
 
     def save_tg_settings(self, token, chat_id):
+        logger.info(f"Сохранение настроек Telegram: Token={token[:5]}... ChatID={chat_id}")
         self.settings_manager.save_settings(token, chat_id)
         # Re-init service
         self.telegram_service = TelegramService(token, chat_id)
-        if self.telegram_service.verify_permissions():
-            return True, "Настройки сохранены и проверены успешно!"
-        else:
-            return False, "Настройки сохранены, но проверка прав не удалась."
+        return True, "Настройки сохранены locally."
+
+    def test_tg_connection(self):
+        if not self.telegram_service:
+            return False, "Сервис Telegram не инициализирован."
+        return self.telegram_service.send_test_message("Test message from VK Music Saver Pro")
 
     def get_tg_settings(self):
         return self.settings_manager.get_settings()
+        
+    def get_dashboard_stats(self):
+        logger.debug("Запрос статистики для дашборда...")
+        pl_count = self.playlist_repo.get_count()
+        track_stats = self.track_repo.get_stats()
+        
+        # Calculate storage used
+        storage_size_mb = 0
+        try:
+            total_size = 0
+            if os.path.exists(DOWNLOAD_DIR):
+                for dirpath, dirnames, filenames in os.walk(DOWNLOAD_DIR):
+                    for f in filenames:
+                        fp = os.path.join(dirpath, f)
+                        if not os.path.islink(fp):
+                            total_size += os.path.getsize(fp)
+                storage_size_mb = round(total_size / (1024 * 1024), 2)
+            else:
+                logger.debug(f"Папка загрузок {DOWNLOAD_DIR} не найдена.")
+        except Exception as e:
+            logger.error(f"Error calculating storage: {e}")
+            
+        stats = {
+            "playlists": pl_count,
+            "tracks_total": track_stats["total"],
+            "tracks_downloaded": track_stats["downloaded"],
+            "tracks_uploaded": track_stats["uploaded"],
+            "storage_mb": storage_size_mb
+        }
+        logger.debug(f"Статистика собрана: {stats}")
+        return stats
 
     def start_browser_and_login(self):
-
         def _task():
             self.on_log("Запуск браузера...")
             logger.info("Пользователь нажал 'Войти'. Запускаем Chrome...")
@@ -112,26 +149,51 @@ class AppController:
         threading.Thread(target=_task, daemon=True).start()
 
     def start_download(self, selected_playlists: List[Playlist], settings: dict):
+        # settings: { "use_id3": bool, "use_covers": bool, "strategy": str }
+        # Strategy: "download_only", "download_upload", "direct_transfer"
         self.is_running = True
+        strategy = settings.get("strategy", "download_only")
 
         def _task():
+            if not self.driver:
+                self.on_log("Ошибка: Браузер не запущен. Пожалуйста, войдите в ВК.")
+                self.is_running = False
+                self.on_download_complete()
+                return
+
             parser = ParserService(self.driver, self.user_id)
             decoder = LinkDecoder(self.driver)
+            
+            logger.info(f"Запуск процесса. Стратегия: {strategy}")
+            self.on_log(f"Запуск процесса. Стратегия: {strategy}")
 
             for pl in selected_playlists:
                 if not self.is_running:
                     break
 
-                self.on_log(f"Обработка плейлиста: {pl.title}")
+                logger.info(f"--- Обработка плейлиста: {pl.title} ---")
+                self.on_log(f"--- Обработка плейлиста: {pl.title} ---")
 
-                # Parse Tracks
-                track_dicts = parser.parse_tracks_from_page(pl.url)
-                total = len(track_dicts)
+                try:
+                    # Parse Tracks
+                    track_dicts = parser.parse_tracks_from_page(pl.url)
+                    total = len(track_dicts)
+                except Exception as e:
+                    logger.exception(f"Ошибка парсинга плейлиста {pl.title}")
+                    self.on_log(f"Ошибка парсинга плейлиста {pl.title}: {e}")
+                    continue
 
                 # Prepare folder
                 pl_folder_name = sanitize_filename(pl.title)
                 pl_dir = os.path.join(DOWNLOAD_DIR, pl_folder_name)
                 os.makedirs(pl_dir, exist_ok=True)
+
+                # Prepare Telegram Topic (if uploading)
+                topic_id = None
+                if strategy in ["download_upload", "direct_transfer"]:
+                    logger.info(f"Создание/получение темы в Telegram для: {pl.title}")
+                    if self.telegram_service:
+                        topic_id = self.telegram_service.create_topic(pl.title)
 
                 for i, t_data in enumerate(track_dicts):
                     if not self.is_running:
@@ -139,7 +201,7 @@ class AppController:
 
                     progress_val = (i + 1) / total
                     self.on_progress(progress_val)
-
+                    
                     # Convert dict to Domain Model
                     track = Track(
                         id=t_data["id"],
@@ -164,80 +226,123 @@ class AppController:
 
                     self.track_repo.save(track)
 
-                    safe_title = sanitize_filename(f"{track.artist} - {track.title}")[
-                        :100
-                    ]
+                    safe_title = sanitize_filename(f"{track.artist} - {track.title}")[:100]
                     file_name = f"{safe_title}.mp3"
                     file_path = os.path.join(pl_dir, file_name)
 
-                    # Check existing
-                    if os.path.exists(file_path) and os.path.getsize(file_path) > 1024:
-                        self.on_log(f"Skip (exist): {safe_title}")
-                        continue
-
-                    self.on_log(f"Скачивание: {safe_title}")
-
-                    # Get Link
-                    # Since existing parser/model logic passes dict for link decoding, we might need to pass the original dict or reconstruct it partially.
-                    # The LinkDecoder expects a dict with keys used in JS script ('url', 'owner_id', 'audio_id' etc.)
-                    # Our Track model has these fields. Let's make a dict helper or pass attributes.
-                    # Simplified: Re-use t_data which is exactly what parser gave us.
-
-                    direct_url = decoder.get_audio_url(t_data)
-
-                    if direct_url:
-                        try:
-                            FFmpegService.download(direct_url, file_path)
-
-                            # Tagging
-                            Tagger.apply_tags(
-                                file_path,
-                                track,
-                                pl.title,
-                                use_id3=settings.get("use_id3", True),
-                                use_covers=settings.get("use_covers", True),
-                            )
-
-                            self.track_repo.update_status(
-                                track.id, "downloaded", local_path=file_path
-                            )
-
-                            if self.telegram_service and self.telegram_service.verify_permissions():
-                                self.on_log(f"Загрузка в Telegram: {track.title}...")
-                                try:
-                                    msg = self.telegram_service.upload_track(
-                                        file_path,
-                                        caption=f"#{sanitize_filename(pl.title).replace(' ', '_')}",
-                                        artist=track.artist,
-                                        title=track.title,
-                                        duration=track.duration
-                                    )
-                                    if msg:
-                                        msg_id = str(msg.message_id)
-                                        file_id = msg.audio.file_id if msg.audio else None
-                                        self.track_repo.update_tg_status(track.id, 'uploaded', msg_id, file_id)
-                                        self.on_log(f"TG: Успешная загрузка.")
-                                    else:
-                                        self.track_repo.update_tg_status(track.id, 'failed')
-                                except Exception as e:
-                                    self.on_log(f"TG Ошибка: {e}")
-                                    self.track_repo.update_tg_status(track.id, 'failed')
-
-                            self.on_log("Готово.")
-
-                        except DownloadError as de:
-                            self.on_log(f"Ошибка загрузки: {de}")
+                    # Check existing for download
+                    file_exists = os.path.exists(file_path) and os.path.getsize(file_path) > 1024
+                    
+                    if file_exists:
+                         logger.info(f"Файл уже существует на диске (размер > 1кб): {file_path}")
+                         self.on_log(f"Файл найден: {safe_title}")
                     else:
-                        self.on_log("Не получена ссылка.")
+                        logger.info(f"Файл не найден или слишком мал. Начинаем загрузку: {safe_title}")
+                        self.on_log(f"Скачивание: {safe_title}")
+                        direct_url = decoder.get_audio_url(t_data)
+                        if direct_url:
+                            logger.debug(f"Получена прямая ссылка для {track.id}: {direct_url[:50]}...")
+                            try:
+                                logger.debug(f"Вызов FFmpegService для {file_path}")
+                                FFmpegService.download(direct_url, file_path)
+                                # Tagging
+                                logger.info(f"Применяем теги для {file_path}")
+                                self.on_log(f"Тегирование: {safe_title}")
+                                Tagger.apply_tags(
+                                    file_path,
+                                    track,
+                                    pl.title,
+                                    use_id3=settings.get("use_id3", True),
+                                    use_covers=settings.get("use_covers", True),
+                                )
+                                self.track_repo.update_status(track.id, "downloaded", local_path=file_path)
+                                file_exists = True
+                                logger.info(f"Загрузка и тегирование завершены: {safe_title}")
+                            except Exception as de:
+                                logger.exception(f"Ошибка в FFmpeg или Tagger для {track.id}")
+                                self.on_log(f"Ошибка загрузки/ffmpeg: {de}")
+                                file_exists = False
+                        else:
+                            logger.warning(f"LinkDecoder не смог вытащить ссылку для трека {track.id}")
+                            self.on_log(f"Не удалось получить ссылку: {safe_title}")
+                            file_exists = False
+
+                    # Telegram Upload Logic
+                    if file_exists and strategy in ["download_upload", "direct_transfer"]:
+                        logger.info(f"Подготовка к загрузке в TG. Стратегия={strategy}, Файл={file_path}, TopicID={topic_id}")
+                        self.on_log(f"Загрузка в Telegram...")
+
+                        # Extract Thumbnail for Telegram
+                        thumbnail_data = None
+                        try:
+                            # Try with ID3 (mutagen)
+                            audio_tags = ID3(file_path)
+                            logger.debug(f"Теги найдены в файле: {list(audio_tags.keys())}")
+                            
+                            # Look for APIC frames
+                            apic_frames = [tag for tag in audio_tags.values() if isinstance(tag, APIC)]
+                            if apic_frames:
+                                # Prioritize Cover (type 3) or Other (type 0)
+                                cover = next((f for f in apic_frames if f.type == 3), apic_frames[0])
+                                thumbnail_data = cover.data
+                                logger.info(f"Обложка успешно извлечена. Тип: {cover.mime}, Размер: {len(thumbnail_data)} байт")
+                            else:
+                                logger.warning("В тегах файла не найдены кадры APIC (обложка).")
+                                
+                        except Exception as e_thumb:
+                            logger.warning(f"Ошибка при попытке извлечь обложку для Telegram: {e_thumb}")
+                            # Fallback: check if we have cover_url and can download it again quickly? 
+                            # Better not to delay. Maybe track.cover_url is available?
+                            # For now, just log.
+
+                        try:
+                            msg = self.telegram_service.upload_track(
+                                file_path,
+                                caption=f"#{sanitize_filename(pl.title).replace(' ', '_')}",
+                                artist=track.artist,
+                                title=track.title,
+                                duration=track.duration,
+                                topic_id=topic_id,
+                                thumbnail=thumbnail_data
+                            )
+                            if msg:
+                                msg_id = str(msg.message_id)
+                                file_id = msg.audio.file_id if msg.audio else None
+                                logger.info(f"Трек загружен в ТГ! MessageID={msg_id} FileID={file_id}")
+                                self.track_repo.update_tg_status(track.id, 'uploaded', msg_id, file_id)
+                                self.on_log(f"TG: Успех.")
+                                
+                                # Process "Direct Transfer" - Delete after upload
+                                if strategy == "direct_transfer":
+                                    logger.info(f"Удаление локального файла (Direct Transfer): {file_path}")
+                                    try:
+                                        os.remove(file_path)
+                                        self.on_log(f"Файл удален (Direct Transfer).")
+                                        self.track_repo.update_status(track.id, "deleted_after_upload")
+                                    except OSError as e:
+                                        logger.error(f"Не удалось удалить файл {file_path}: {e}")
+                                        self.on_log(f"Ошибка удаления файла: {e}")
+                            else:
+                                logger.warning("TelegramService вернул None при загрузке.")
+                                self.on_log("TG: Пропущен (сервис недоступен или ошибка)")
+                                self.track_repo.update_tg_status(track.id, 'failed')
+                        except Exception as e:
+                            logger.exception(f"Исключение при выгрузке в ТГ трека {track.id}")
+                            self.on_log(f"TG Ошибка: {e}")
+                            self.track_repo.update_tg_status(track.id, 'failed')
 
             self.is_running = False
             self.on_download_complete()
+            logger.info("Весь процесс завершен (is_running=False)")
             self.on_log("Очередь завершена.")
 
         threading.Thread(target=_task, daemon=True).start()
 
     def close_app(self):
+        logger.info("Закрытие приложения...")
         self.is_running = False
         if self.driver:
+            logger.info("Закрытие Selenium Driver...")
             self.driver.quit()
         self._db_manager.close()
+        logger.info("База данных закрыта.")

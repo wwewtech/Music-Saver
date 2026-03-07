@@ -22,17 +22,19 @@ class ParserService:
             return []
 
         url = f"https://vk.com/audios{self.user_id}?block=my_playlists&section=all"
-        logger.debug(f"Navigating to {url}")
+        logger.info(f"Переход на страницу плейлистов: {url}")
         self.driver.get(url)
         time.sleep(3)
         
-        logger.info("Scrolling playlists...")
+        logger.info("Начинаем прокрутку списка плейлистов...")
         self._scroll_to_end()
 
         playlists = []
+        logger.debug("Поиск элементов плейлистов на странице (div.audio_pl_item2)...")
         elements = self.driver.find_elements(By.CSS_SELECTOR, "div.audio_pl_item2")
+        logger.info(f"Найдено DOM-элементов плейлистов: {len(elements)}")
 
-        for el in elements:
+        for i, el in enumerate(elements):
             try:
                 try:
                     title = el.find_element(By.CSS_SELECTOR, ".audio_pl__title").text
@@ -49,30 +51,42 @@ class ParserService:
                     pid = href.split("/")[-1]
 
                 playlists.append({"id": pid, "title": title, "url": href})
-            except:
+                logger.debug(f"Плейлист [{i}]: {title} (ID: {pid})")
+            except Exception as e:
+                logger.warning(f"Ошибка при парсинге элемента плейлиста [{i}]: {e}")
                 pass
+        
+        logger.info(f"Успешно обработано плейлистов: {len(playlists)}")
         return playlists
 
     def parse_tracks_from_page(self, url):
+        logger.info(f"Загрузка страницы плейлиста для парсинга треков: {url}")
         self.driver.get(url)
         time.sleep(4)
+        
+        logger.info("Раскрываем плейлист полностью (expand)...")
         self._expand_playlist_fully()
 
-        logger.info("Collecting metadata via JS...")
+        logger.info("Вызов JS-скрипта для сбора метаданных треков...")
         tracks = self.driver.execute_script(JS_PARSE_TRACKS)
         if not tracks:
-            logger.warning("Main parser returned 0 tracks.")
+            logger.warning("Main parser JS вернул пустой список или 0 треков.")
             return []
 
+        logger.info(f"JS-скрипт вернул {len(tracks)} треков.")
         return tracks
 
     def _scroll_to_end(self):
         last_h = 0
+        scroll_attempts = 0
         while True:
             self.driver.execute_script(JS_SCROLL_TO_BOTTOM)
             time.sleep(1.5)
             curr_h = self.driver.execute_script(JS_SCROLL_HEIGHT)
+            scroll_attempts += 1
+            logger.debug(f"Scroll attempt {scroll_attempts}: height {curr_h}")
             if curr_h == last_h:
+                logger.debug("Достигнут конец страницы (высота не изменилась).")
                 break
             last_h = curr_h
 

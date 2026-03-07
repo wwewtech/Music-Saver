@@ -23,6 +23,16 @@ class PlaylistRepository:
         cursor.execute("SELECT id, title, url, status FROM playlists")
         return [Playlist(*row) for row in cursor.fetchall()]
 
+    def get_count(self):
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("SELECT COUNT(*) FROM playlists")
+            res = cursor.fetchone()
+            return res[0] if res else 0
+        except Exception as e:
+            print(f"DB Error (PlaylistRepository.get_count): {e}")
+            return 0
+
 
 class TrackRepository:
     def __init__(self):
@@ -89,4 +99,27 @@ class TrackRepository:
             self.conn.commit()
         except Exception as e:
             print(f"DB Error (TrackRepository.update_tg_status): {e}")
+
+    def get_stats(self):
+        cursor = self.conn.cursor()
+        stats = {
+            "total": 0,
+            "downloaded": 0,
+            "uploaded": 0
+        }
+        try:
+            cursor.execute("SELECT COUNT(*) FROM tracks")
+            res = cursor.fetchone()
+            stats["total"] = res[0] if res else 0
+            
+            cursor.execute("SELECT COUNT(*) FROM tracks WHERE status = 'downloaded'")
+            res = cursor.fetchone()
+            stats["downloaded"] = res[0] if res else 0
+            
+            cursor.execute("SELECT COUNT(*) FROM tracks WHERE tg_status = 'uploaded'")
+            res = cursor.fetchone()
+            stats["uploaded"] = res[0] if res else 0
+        except Exception as e:
+            print(f"DB Error (TrackRepository.get_stats): {e}")
+        return stats
 

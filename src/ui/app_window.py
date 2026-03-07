@@ -1,124 +1,133 @@
 import customtkinter as ctk
-import logging
-from datetime import datetime
-
-from src.ui.components.sidebar import SideBar
-from src.ui.components.log_panel import LogPanel
-from src.ui.components.playlist_view import PlaylistView
-
+from src.ui.views.dashboard_view import DashboardView
+from src.ui.views.downloader_view import DownloaderView
+from src.ui.views.telegram_view import TelegramView
+from src.ui.views.logs_view import LogsView
 
 class AppWindow(ctk.CTk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-
-        # Configure Controller Callbacks
-        self.controller.on_log = self.on_log_message
-        self.controller.on_scan_complete = self.on_scan_complete
-        self.controller.on_progress = self.on_progress_update
-        self.controller.on_download_complete = self.on_download_finished
-        self.controller.on_login_success = self.on_login_success
-        self.geometry("1000x700")
-
-        self.setup_ui()
-
-    def setup_ui(self):
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-
-        # 1. Sidebar
-        self.sidebar = SideBar(
-            self,
-            on_login=self.controller.start_browser_and_login,
-            on_scan=self.controller.scan_playlists,
-        )
-        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
-        # Telegram Init
-        tg = self.controller.get_tg_settings()
-        self.sidebar.set_tg_settings(tg.get('tg_bot_token'), tg.get('tg_chat_id'))
         
-        def save_tg(token, chat_id):
-            success, msg = self.controller.save_tg_settings(token, chat_id)
-            self.on_log_message(msg)
+        self.title("VK Music Saver Pro - Admin Panel")
+        self.geometry("1100x700")
+        
+        # Configure Controller Callbacks
+        self.controller.on_log = self.log_message
+        self.controller.on_scan_complete = self.on_scan_complete
+        self.controller.on_progress = self.on_progress
+        self.controller.on_download_complete = self.on_download_complete
+        self.controller.on_login_success = self.on_login_success
+        
+        # Hook for strategy
+        self.controller.get_current_strategy = self.get_strategy_from_ui
+        
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        
+        self.setup_sidebar()
+        self.setup_views()
+        
+        # Start Clock/Stats Loop
+        self.update_stats_loop()
 
-        self.sidebar.on_save_callback = save_tg
+    def setup_sidebar(self):
+        self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        
+        self.lbl_logo = ctk.CTkLabel(self.sidebar, text="VK SAVER PRO", font=("Roboto", 20, "bold"))
+        self.lbl_logo.pack(pady=30)
+        
+        self.btn_dash = self.create_nav_btn("📊 Dashboard", "dashboard")
+        self.btn_vk = self.create_nav_btn("🎧 VK Downloader", "vk")
+        self.btn_tg = self.create_nav_btn("✈️ Telegram", "tg")
+        self.btn_logs = self.create_nav_btn("📝 Logs", "logs")
+        
+        # Small footer
+        lbl_ver = ctk.CTkLabel(self.sidebar, text="v2.0 Checkpoint", text_color="gray", font=("Arial", 10))
+        lbl_ver.pack(side="bottom", pady=10)
 
-        # 2. Main Area (Playlists)
-        self.main_panel = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_panel.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+    def create_nav_btn(self, text, view_name):
+        btn = ctk.CTkButton(self.sidebar, text=text, fg_color="transparent", anchor="w", 
+                            height=40, font=("Roboto", 14),
+                            command=lambda: self.show_view(view_name))
+        btn.pack(fill="x", padx=10, pady=5)
+        return btn
 
-        self.playlist_view = PlaylistView(self.main_panel)
-        self.playlist_view.pack(fill="both", expand=True, pady=5)
+    def setup_views(self):
+        self.view_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.view_container.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.view_container.grid_rowconfigure(0, weight=1)
+        self.view_container.grid_columnconfigure(0, weight=1)
+        
+        self.views = {}
+        self.views["dashboard"] = DashboardView(self.view_container, self.controller)
+        self.views["vk"] = DownloaderView(self.view_container, self.controller)
+        self.views["tg"] = TelegramView(self.view_container, self.controller)
+        self.views["logs"] = LogsView(self.view_container)
+        
+        # Init default
+        self.show_view("dashboard")
 
-        # 3. Bottom Panel (Actions + Log)
-        self.bottom_panel = ctk.CTkFrame(self, height=150)
-        self.bottom_panel.grid(row=1, column=1, sticky="ew", padx=10, pady=10)
-
-        self.btn_download = ctk.CTkButton(
-            self.bottom_panel,
-            text="3. СКАЧАТЬ",
-            command=self.action_download,
-            state="disabled",
-            fg_color="green",
-            hover_color="darkgreen",
-            height=40,
-        )
-        self.btn_download.pack(fill="x", padx=10, pady=5)
-
-        self.progress_bar = ctk.CTkProgressBar(self.bottom_panel)
-        self.progress_bar.set(0)
-        self.progress_bar.pack(fill="x", padx=10, pady=5)
-
-        self.log_panel = LogPanel(self.bottom_panel)
-        self.log_panel.pack(fill="both", padx=10, pady=5)
-
-    def action_download(self):
-        selected = self.playlist_view.get_selected()
-        if not selected:
-            self.on_log_message("Выберите плейлист!")
-            return
-
-        settings = {
-            "use_id3": self.sidebar.sw_tags.get(),
-            "use_covers": self.sidebar.sw_covers.get(),
+    def show_view(self, name):
+        # Hide all
+        for v in self.views.values():
+            v.grid_forget()
+        
+        # Reset butons
+        for btn in [self.btn_dash, self.btn_vk, self.btn_tg, self.btn_logs]:
+            btn.configure(fg_color="transparent")
+            
+        # Highlight active
+        btn_map = {
+            "dashboard": self.btn_dash,
+            "vk": self.btn_vk,
+            "tg": self.btn_tg,
+            "logs": self.btn_logs
         }
+        if name in btn_map:
+            btn_map[name].configure(fg_color=["#3B8ED0", "#1F6AA5"])
 
-        self.btn_download.configure(state="disabled", text="РАБОТАЮ...")
-        self.controller.start_download(selected, settings)
+        # Show one
+        self.views[name].grid(row=0, column=0, sticky="nsew")
 
-    # --- Callbacks ---
-    def on_log_message(self, msg):
-        # Ensure thread safety for Tkinter
-        self.after(0, lambda: self.log_panel.append_log(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}"))
-
-    def on_login_success(self):
-        self.after(0, lambda: self.sidebar.enable_scan_btn())
-        self.on_log_message("Кнопка поиска плейлистов разблокирована.")
-
+    def log_message(self, msg):
+        self.after(0, lambda: self.views["logs"].append(msg))
+    
     def on_scan_complete(self, playlists):
-        def _update():
-            self.playlist_view.update_playlists(playlists)
-            if playlists:
-                self.btn_download.configure(state="normal")
-                self.sidebar.enable_scan_btn()
-            else:
-                self.sidebar.enable_scan_btn()
+        self.after(0, lambda: self.views["vk"].update_playlists(playlists))
+        self.on_log_message("Playlists received. Switching view...")
+        self.after(100, lambda: self.show_view("vk"))
 
-        self.after(0, _update)
+    def on_progress(self, val):
+        pass # Optional: Add progress bar to sidebar if requested.
 
-    def on_progress_update(self, val):
-        self.after(0, lambda: self.progress_bar.set(val))
+    def on_download_complete(self):
+        self.log_message("✅ ALl TASKS COMPLETED.")
+        
+    def on_login_success(self):
+        self.log_message("Login Successful. You can now scan playlists.")
+        self.views["vk"].lbl_status.configure(text="Status: Connected", text_color="green")
+    
+    def on_log_message(self, msg):
+        # Compatibility wrapper
+        self.log_message(msg)
 
-    def on_download_finished(self):
-        self.after(
-            0, lambda: self.btn_download.configure(state="normal", text="3. СКАЧАТЬ")
-        )
+    def get_strategy_from_ui(self):
+        return self.views["tg"].get_strategy()
 
-    def setup_logging_pipe(self):
-        # Optional: pipe standard logger to this GUI
-        # For now, we rely on controller calling on_log
-        pass
+    def update_stats_loop(self):
+        # Update dashboard every 5s
+        if self.views.get("dashboard"):
+            try:
+                self.views["dashboard"].update_stats()
+            except:
+                pass
+        self.after(5000, self.update_stats_loop)
 
     def on_close(self):
-        self.controller.close_app()
+        try:
+            self.controller.close_app()
+        except:
+            pass
         self.destroy()
