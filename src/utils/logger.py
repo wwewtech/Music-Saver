@@ -7,7 +7,7 @@ def setup_logger():
     # Ensure directory exists
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
-    logger = logging.getLogger("VKMusicSaver")
+    logger = logging.getLogger("MusicSaver")
     logger.setLevel(logging.DEBUG)
 
     if logger.handlers:

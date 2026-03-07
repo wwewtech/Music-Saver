@@ -14,4 +14,4 @@ if (Test-Path ".\dist") {
 }
 
 & $venvPyInstaller --clean --noconfirm .\vk_music_saver.spec
-Write-Host "Сборка завершена. Результат: .\dist\VKMusicSaver" -ForegroundColor Green
+Write-Host "Сборка завершена. Результат: .\dist\MusicSaver" -ForegroundColor Green

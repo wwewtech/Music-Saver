@@ -156,7 +156,7 @@ class AppController:
         if not self.telegram_service:
             return False, "Сервис Telegram не инициализирован."
         return self.telegram_service.send_test_message(
-            "Тестовое сообщение из VK Music Saver Pro"
+            "Тестовое сообщение из Music Saver Pro"
         )
 
     def get_tg_settings(self):

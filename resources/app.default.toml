@@ -1,7 +1,7 @@
 [app]
-name = "VK Music Saver"
+name = "Music Saver"
 version = "1.0.0"
-app_id = "com.vkmusicsaver.app"
+app_id = "com.MusicSaver.app"
 
 [ui]
 appearance_mode = "Dark"

@@ -17,7 +17,7 @@ if ffmpeg_path.exists():
 
 datas = customtkinter_datas + bin_datas
 
-icon_path = project_root / "resources" / "VKMusicSaver.ico"
+icon_path = project_root / "resources" / "MusicSaver.ico"
 
 # Добавляем папку resources, чтобы иконка была доступна и внутри запущенного приложения
 if (project_root / "resources").exists():
@@ -41,7 +41,7 @@ pyz = PYZ(a.pure)
 
 exe_kwargs = {
     "exclude_binaries": True,
-    "name": "VKMusicSaver",
+    "name": "MusicSaver",
     "debug": False,
     "bootloader_ignore_signals": False,
     "strip": False,
@@ -67,5 +67,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="VKMusicSaver",
+    name="MusicSaver",
 )

@@ -62,7 +62,7 @@ class AppWindow(ctk.CTk):
         self._configure_window_geometry()
 
         # Установка иконки приложения
-        icon_path = os.path.join(RESOURCE_DIR, "resources", "VKMusicSaver.ico")
+        icon_path = os.path.join(RESOURCE_DIR, "resources", "MusicSaver.ico")
         if os.path.exists(icon_path):
             try:
                 self.iconbitmap(icon_path)

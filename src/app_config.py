@@ -52,9 +52,9 @@ UI_DEFAULTS = dict(_APP_CONFIG.get("ui", {}))
 _STORAGE = dict(_APP_CONFIG.get("storage", {}))
 DEFAULT_SETTINGS = dict(_APP_CONFIG.get("settings", {}).get("defaults", {}))
 
-APP_NAME = str(APP_METADATA.get("name", "VK Music Saver"))
+APP_NAME = str(APP_METADATA.get("name", "Music Saver"))
 APP_VERSION = str(APP_METADATA.get("version", "1.0.0"))
-APP_ID = str(APP_METADATA.get("app_id", "com.vkmusicsaver.app"))
+APP_ID = str(APP_METADATA.get("app_id", "com.MusicSaver.app"))
 UI_APPEARANCE_MODE = str(UI_DEFAULTS.get("appearance_mode", "Dark"))
 UI_COLOR_THEME = str(UI_DEFAULTS.get("color_theme", "blue"))
 

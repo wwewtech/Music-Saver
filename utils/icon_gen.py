@@ -62,7 +62,7 @@ def create_app_icon():
     resources_dir = Path("resources")
     resources_dir.mkdir(exist_ok=True)
     
-    output_path = resources_dir / "VKMusicSaver.ico"
+    output_path = resources_dir / "MusicSaver.ico"
     
     # Windows standard icon sizes
     sizes = [(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)]
