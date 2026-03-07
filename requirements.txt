@@ -1,0 +1,7 @@
+customtkinter
+selenium
+mutagen
+requests
+pyTelegramBotAPI
+
+# @getmyid_bot
