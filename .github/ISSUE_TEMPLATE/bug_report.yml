@@ -1,0 +1,70 @@
+name: Bug report
+description: Сообщить об ошибке в работе приложения
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что нашли время сообщить об ошибке. Заполните поля ниже — это поможет быстрее разобраться с проблемой.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание ошибки
+      description: Что происходит? Чего вы ожидали?
+      placeholder: Опишите ошибку как можно подробнее
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги для воспроизведения
+      description: Как воспроизвести ошибку?
+      placeholder: |
+        1. Открыть приложение
+        2. Перейти в раздел ...
+        3. Нажать на ...
+        4. Увидеть ошибку
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+      description: Что должно было произойти?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи / сообщение об ошибке
+      description: Вставьте текст ошибки или скриншот, если есть
+      render: shell
+
+  - type: input
+    id: os
+    attributes:
+      label: Операционная система
+      placeholder: например, Windows 11 23H2
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Версия Python
+      placeholder: например, 3.11.6
+    validations:
+      required: false
+
+  - type: input
+    id: chrome
+    attributes:
+      label: Версия Google Chrome
+      placeholder: например, 123.0.6312.58
+    validations:
+      required: false

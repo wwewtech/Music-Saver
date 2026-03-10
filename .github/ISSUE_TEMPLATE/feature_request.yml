@@ -1,0 +1,42 @@
+name: Feature request
+description: Предложить новую функцию или улучшение
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Расскажите, какую возможность вы хотели бы видеть в приложении.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему решает эта функция?
+      description: Опишите ситуацию, в которой вам не хватает этой возможности
+      placeholder: При работе с большими плейлистами неудобно, что...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Предлагаемое решение
+      description: Как вы видите реализацию этой функции?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Альтернативы
+      description: Рассматривали ли вы другие подходы?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Дополнительный контекст
+      description: Любая другая информация, скриншоты, ссылки
+    validations:
+      required: false
