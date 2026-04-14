@@ -1,8 +1,18 @@
 $ErrorActionPreference = "Stop"
 
 $venvPyInstaller = ".\.venv\Scripts\pyinstaller.exe"
-if (-not (Test-Path $venvPyInstaller)) {
-    throw "PyInstaller не найден в .venv. Выполните: .\.venv\Scripts\python.exe -m pip install -r requirements.txt"
+$pyInstallerCmd = $null
+
+if (Test-Path $venvPyInstaller) {
+    $pyInstallerCmd = $venvPyInstaller
+} else {
+    # CI runs without a project-local .venv, so use the active Python environment.
+    try {
+        python -m PyInstaller --version | Out-Null
+        $pyInstallerCmd = "python -m PyInstaller"
+    } catch {
+        throw "PyInstaller не найден ни в .venv, ни в текущем Python. Установите зависимости: python -m pip install -r requirements.txt"
+    }
 }
 
 if (Test-Path ".\build") {
@@ -13,5 +23,9 @@ if (Test-Path ".\dist") {
     Remove-Item ".\dist" -Recurse -Force
 }
 
-& $venvPyInstaller --clean --noconfirm .\vk_music_saver.spec
+if ($pyInstallerCmd -is [string] -and $pyInstallerCmd -like "python -m PyInstaller") {
+    python -m PyInstaller --clean --noconfirm .\vk_music_saver.spec
+} else {
+    & $pyInstallerCmd --clean --noconfirm .\vk_music_saver.spec
+}
 Write-Host "Сборка завершена. Результат: .\dist\MusicSaver" -ForegroundColor Green
