@@ -3,7 +3,15 @@ import tkinter as tk
 
 import customtkinter as ctk
 
-from src.ui.components.primitives import EmptyState, MetricTile, SectionHeader, StatusBadge, Surface, set_resize_lock, flush_pending_wraps
+from src.ui.components.primitives import (
+    EmptyState,
+    MetricTile,
+    SectionHeader,
+    StatusBadge,
+    Surface,
+    set_resize_lock,
+    flush_pending_wraps,
+)
 from src.ui.design_system import button_style, ui_font
 
 
@@ -43,7 +51,9 @@ class DashboardView(ctk.CTkFrame):
         self.hero_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
 
         self.readiness_card = Surface(self.container, self.theme, variant="panel")
-        self.readiness_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
+        self.readiness_card.grid(
+            row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8)
+        )
 
         self.readiness_header = SectionHeader(
             self.readiness_card,
@@ -65,7 +75,9 @@ class DashboardView(ctk.CTkFrame):
                 anchor="w",
             )
             label.pack(side="left")
-            badge = StatusBadge(row, self.theme, self.i18n.t("dashboard.readiness.pending"))
+            badge = StatusBadge(
+                row, self.theme, self.i18n.t("dashboard.readiness.pending")
+            )
             badge.pack(side="right")
             self.badge_rows[key] = (label, badge)
 
@@ -99,7 +111,9 @@ class DashboardView(ctk.CTkFrame):
         self.card_storage.grid(row=0, column=2, sticky="ew", padx=(8, 0))
 
         self.activity_card = Surface(self.container, self.theme, variant="surface")
-        self.activity_card.grid(row=2, column=0, sticky="nsew", padx=(0, 8), pady=(8, 0))
+        self.activity_card.grid(
+            row=2, column=0, sticky="nsew", padx=(0, 8), pady=(8, 0)
+        )
 
         self.activity_header = SectionHeader(
             self.activity_card,
@@ -130,8 +144,14 @@ class DashboardView(ctk.CTkFrame):
 
         self.action_buttons = []
         action_specs = [
-            ("dashboard.actions.downloads", lambda: self.winfo_toplevel().show_view("vk")),
-            ("dashboard.actions.settings", lambda: self.winfo_toplevel().show_view("tg")),
+            (
+                "dashboard.actions.downloads",
+                lambda: self.winfo_toplevel().show_view("vk"),
+            ),
+            (
+                "dashboard.actions.settings",
+                lambda: self.winfo_toplevel().show_view("tg"),
+            ),
             ("dashboard.actions.logs", lambda: self.winfo_toplevel().show_view("logs")),
         ]
         for key, command in action_specs:
@@ -239,16 +259,16 @@ class DashboardView(ctk.CTkFrame):
         telegram_tone = (
             "info"
             if strategy == "download_only" and not tg_ready
-            else "success"
-            if tg_ready
-            else "warning"
+            else "success" if tg_ready else "warning"
         )
         telegram_text = (
             self.i18n.t("dashboard.readiness.local")
             if strategy == "download_only" and not tg_ready
-            else self.i18n.t("dashboard.readiness.ready")
-            if tg_ready
-            else self.i18n.t("dashboard.readiness.pending")
+            else (
+                self.i18n.t("dashboard.readiness.ready")
+                if tg_ready
+                else self.i18n.t("dashboard.readiness.pending")
+            )
         )
         storage_tone = "success" if storage_ready else "warning"
         storage_text = (

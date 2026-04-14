@@ -20,9 +20,11 @@ class VKDriverFactory:
             "SECURITY: Chrome profile хранит cookie-файлы сессий VK/Yandex. "
             f"Путь: {PROFILE_DIR}. Ограничьте доступ к этой директории."
         )
-        
+
         # Настройка кастомного пути для кэша Selenium, чтобы избежать проблем с правами доступа в .cache
-        selenium_cache_dir = os.path.join(os.path.dirname(PROFILE_DIR), "selenium_cache")
+        selenium_cache_dir = os.path.join(
+            os.path.dirname(PROFILE_DIR), "selenium_cache"
+        )
         os.makedirs(selenium_cache_dir, exist_ok=True)
         os.environ["SE_CACHE_PATH"] = selenium_cache_dir
 
@@ -50,10 +52,15 @@ class VKDriverFactory:
             raise e
 
         try:
-            driver.execute_cdp_cmd("Network.enable", {
-                "maxTotalBufferSize": 10 * 1024 * 1024,   # 10 MB max instead of unlimited
-                "maxResourceBufferSize": 5 * 1024 * 1024,  # 5 MB per resource
-            })
+            driver.execute_cdp_cmd(
+                "Network.enable",
+                {
+                    "maxTotalBufferSize": 10
+                    * 1024
+                    * 1024,  # 10 MB max instead of unlimited
+                    "maxResourceBufferSize": 5 * 1024 * 1024,  # 5 MB per resource
+                },
+            )
             driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled": True})
         except Exception as e:
             logger.warning(f"Не удалось настроить Network через CDP: {e}")

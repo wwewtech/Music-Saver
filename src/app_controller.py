@@ -744,7 +744,9 @@ class AppController:
                                         f"Пробуем простой HTTP download для {file_path}"
                                     )
                                     SimpleHTTPDownloadService.download(
-                                        direct_url, file_path, is_stopped=self._is_stopped
+                                        direct_url,
+                                        file_path,
+                                        is_stopped=self._is_stopped,
                                     )
                                     logger.info(
                                         f"Успешно скачано простым HTTP методом: {safe_title}"
@@ -758,7 +760,9 @@ class AppController:
                                     )
                                     try:
                                         FFmpegService.download(
-                                            direct_url, file_path, is_stopped=self._is_stopped
+                                            direct_url,
+                                            file_path,
+                                            is_stopped=self._is_stopped,
                                         )
                                     except DownloadError as ff_err:
                                         logger.exception(

@@ -98,9 +98,12 @@ def create_app_icon():
     base, rest = resized[0], resized[1:]
     base.save(ico_path, format="ICO", append_images=rest)
 
-    canvas.resize((512, 512), Image.Resampling.LANCZOS).save(png_preview_path, format="PNG")
+    canvas.resize((512, 512), Image.Resampling.LANCZOS).save(
+        png_preview_path, format="PNG"
+    )
     print(f"Icon generated: {ico_path}")
     print(f"Preview generated: {png_preview_path}")
+
 
 if __name__ == "__main__":
     create_app_icon()

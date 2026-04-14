@@ -136,9 +136,7 @@ class BinaryManager:
                         shutil.copyfileobj(src, dst)
                     return
 
-        raise RuntimeError(
-            f"'{target_name}' not found inside the zip archive"
-        )
+        raise RuntimeError(f"'{target_name}' not found inside the zip archive")
 
     @staticmethod
     def _extract_from_tar_xz(data: bytes, dest: str) -> None:
@@ -160,6 +158,4 @@ class BinaryManager:
                             shutil.copyfileobj(reader, dst)
                         return
 
-        raise RuntimeError(
-            f"'{target_name}' not found inside the tar.xz archive"
-        )
+        raise RuntimeError(f"'{target_name}' not found inside the tar.xz archive")

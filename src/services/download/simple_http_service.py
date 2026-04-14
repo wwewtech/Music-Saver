@@ -79,7 +79,9 @@ class SimpleHTTPDownloadService:
                         "[HTTP_DL_FAIL] reason=hls_playlist "
                         f"content_type={content_type} final_url={final_url}"
                     )
-                    raise SimpleHTTPDownloadError("URL is an HLS playlist, requires ffmpeg")
+                    raise SimpleHTTPDownloadError(
+                        "URL is an HLS playlist, requires ffmpeg"
+                    )
 
                 if "showcaptcha" in final_url_lower or "text/html" in content_type:
                     logger.warning(

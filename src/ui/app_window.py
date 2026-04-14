@@ -5,7 +5,13 @@ from queue import Queue, Empty
 from concurrent.futures import ThreadPoolExecutor
 import os
 from src.app_config import RESOURCE_DIR
-from src.ui.components.primitives import SectionHeader, StatusBadge, Surface, set_resize_lock, flush_pending_wraps
+from src.ui.components.primitives import (
+    SectionHeader,
+    StatusBadge,
+    Surface,
+    set_resize_lock,
+    flush_pending_wraps,
+)
 from src.ui.views.dashboard_view import DashboardView
 from src.ui.views.downloader_view import DownloaderView
 from src.ui.views.telegram_view import TelegramView
@@ -41,7 +47,9 @@ class AppWindow(ctk.CTk):
         self._after_ids = set()
         self._is_closing = False
         self._stats_fetch_in_progress = False
-        self._stats_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ui-stats")
+        self._stats_executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="ui-stats"
+        )
         self._pending_logs = []
         self._resize_restore_id = None
         self._last_window_size = None

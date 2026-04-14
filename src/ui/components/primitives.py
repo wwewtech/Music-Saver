@@ -128,9 +128,14 @@ class StatusBadge(ctk.CTkFrame):
                     "text": self.theme["info"],
                 },
             }
-        colors = StatusBadge._tone_map[theme_id].get(tone, StatusBadge._tone_map[theme_id]["neutral"])
+        colors = StatusBadge._tone_map[theme_id].get(
+            tone, StatusBadge._tone_map[theme_id]["neutral"]
+        )
         next_text = text or self.label.cget("text")
-        if self.label.cget("text") != next_text or self.label.cget("text_color") != colors["text"]:
+        if (
+            self.label.cget("text") != next_text
+            or self.label.cget("text_color") != colors["text"]
+        ):
             self.label.configure(text=next_text, text_color=colors["text"])
         try:
             current_fg = self.cget("fg_color")
@@ -185,14 +190,24 @@ class SectionHeader(ctk.CTkFrame):
     def configure_content(self, title=None, description=None, eyebrow=None):
         if title is not None and self.title.cget("text") != title:
             self.title.configure(text=title)
-        if self.description and description is not None and self.description.cget("text") != description:
+        if (
+            self.description
+            and description is not None
+            and self.description.cget("text") != description
+        ):
             self.description.configure(text=description)
-        if self.eyebrow and eyebrow is not None and self.eyebrow.cget("text") != eyebrow:
+        if (
+            self.eyebrow
+            and eyebrow is not None
+            and self.eyebrow.cget("text") != eyebrow
+        ):
             self.eyebrow.configure(text=eyebrow)
 
 
 class MetricTile(Surface):
-    def __init__(self, master, theme, label, value, accent=False, description=None, **kwargs):
+    def __init__(
+        self, master, theme, label, value, accent=False, description=None, **kwargs
+    ):
         super().__init__(master, theme, variant="surface", **kwargs)
         value_color = theme["text"] if accent else theme["text_soft"]
         value_size = 40 if accent else 26
@@ -225,7 +240,9 @@ class MetricTile(Surface):
             wraplength=320,
         )
         self.description_label.pack(anchor="w", padx=18, pady=(4, 16))
-        bind_auto_wrap(self, self.description_label, horizontal_padding=48, min_wrap=180)
+        bind_auto_wrap(
+            self, self.description_label, horizontal_padding=48, min_wrap=180
+        )
         if not description:
             self.description_label.pack_forget()
 

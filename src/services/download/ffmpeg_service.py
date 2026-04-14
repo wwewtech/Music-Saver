@@ -51,7 +51,10 @@ class FFmpegService:
 
     @staticmethod
     def download(
-        url: str, filepath: str, headers: Optional[dict[str, str]] = None, is_stopped: callable = None
+        url: str,
+        filepath: str,
+        headers: Optional[dict[str, str]] = None,
+        is_stopped: callable = None,
     ):
         ffmpeg = _get_ffmpeg()
         if not url or not url.startswith("http"):
@@ -114,7 +117,7 @@ class FFmpegService:
                     stderr=subprocess.PIPE,
                     text=True,
                 )
-                
+
                 while proc.poll() is None:
                     if is_stopped and is_stopped():
                         proc.terminate()
@@ -127,8 +130,10 @@ class FFmpegService:
 
                 if proc.returncode != 0:
                     stderr = proc.stderr.read()
-                    raise subprocess.CalledProcessError(proc.returncode, cmd, stderr=stderr)
-                
+                    raise subprocess.CalledProcessError(
+                        proc.returncode, cmd, stderr=stderr
+                    )
+
                 if not os.path.exists(filepath):
                     raise DownloadError("File was not created by ffmpeg")
                 file_size = os.path.getsize(filepath)

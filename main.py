@@ -4,6 +4,7 @@ from src.app_controller import AppController
 from src.app_config import APP_ID, UI_APPEARANCE_MODE, UI_COLOR_THEME
 from src.ui.app_window import AppWindow
 
+
 def _set_windows_app_id():
     try:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
@@ -21,6 +22,7 @@ def main():
     app = AppWindow(controller)
     app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()
+
 
 if __name__ == "__main__":
     main()

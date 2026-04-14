@@ -44,7 +44,9 @@ class SettingsManager:
         normalized["setup_completed"] = bool(normalized.get("setup_completed", False))
 
         download_path = normalized.get("download_path", "")
-        normalized["download_path"] = download_path if isinstance(download_path, str) else ""
+        normalized["download_path"] = (
+            download_path if isinstance(download_path, str) else ""
+        )
         return normalized
 
     def _load_legacy_settings(self):

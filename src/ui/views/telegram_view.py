@@ -1,6 +1,12 @@
 import tkinter as tk
 import customtkinter as ctk
-from src.ui.components.primitives import SectionHeader, Surface, bind_auto_wrap, set_resize_lock, flush_pending_wraps
+from src.ui.components.primitives import (
+    SectionHeader,
+    Surface,
+    bind_auto_wrap,
+    set_resize_lock,
+    flush_pending_wraps,
+)
 from src.ui.design_system import button_style, combo_style, entry_style, ui_font
 
 
@@ -74,7 +80,9 @@ class TelegramView(ctk.CTkFrame):
             wraplength=900,
         )
         self.lbl_source_hint.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 16))
-        bind_auto_wrap(source_frame, self.lbl_source_hint, horizontal_padding=32, min_wrap=220)
+        bind_auto_wrap(
+            source_frame, self.lbl_source_hint, horizontal_padding=32, min_wrap=220
+        )
         self._apply_source_hint()
 
         vk_frame = Surface(self.content, self.theme, variant="surface")
@@ -125,7 +133,9 @@ class TelegramView(ctk.CTkFrame):
             justify="left",
         )
         self.lbl_vk_status.grid(row=1, column=0, columnspan=2, padx=5, sticky="ew")
-        bind_auto_wrap(vk_btn_row, self.lbl_vk_status, horizontal_padding=12, min_wrap=180)
+        bind_auto_wrap(
+            vk_btn_row, self.lbl_vk_status, horizontal_padding=12, min_wrap=180
+        )
 
         ym_frame = Surface(self.content, self.theme, variant="surface")
         ym_frame.grid(row=1, column=1, sticky="nsew", padx=(8, 0), pady=(0, 12))
@@ -164,7 +174,9 @@ class TelegramView(ctk.CTkFrame):
             justify="left",
         )
         self.lbl_ym_status.grid(row=1, column=0, padx=5, sticky="ew")
-        bind_auto_wrap(ym_btn_row, self.lbl_ym_status, horizontal_padding=12, min_wrap=180)
+        bind_auto_wrap(
+            ym_btn_row, self.lbl_ym_status, horizontal_padding=12, min_wrap=180
+        )
 
         conn_frame = Surface(self.content, self.theme, variant="panel")
         conn_frame.grid(row=2, column=0, sticky="nsew", padx=(0, 8))

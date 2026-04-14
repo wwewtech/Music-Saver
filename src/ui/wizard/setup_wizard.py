@@ -5,7 +5,12 @@ import webbrowser
 from queue import Queue, Empty
 
 from src.utils.logger import logger
-from src.ui.components.primitives import SectionHeader, StatusBadge, Surface, bind_auto_wrap
+from src.ui.components.primitives import (
+    SectionHeader,
+    StatusBadge,
+    Surface,
+    bind_auto_wrap,
+)
 from src.ui.i18n import I18n
 from src.ui.design_system import (
     get_theme,
@@ -38,7 +43,11 @@ class WizardStep(ctk.CTkFrame):
             eyebrow=self.i18n.t(
                 "wizard.progress",
                 current=getattr(self.wizard, "step", 1),
-                total=len(getattr(self.wizard, "steps_map", {1: None, 2: None, 3: None, 4: None})),
+                total=len(
+                    getattr(
+                        self.wizard, "steps_map", {1: None, 2: None, 3: None, 4: None}
+                    )
+                ),
             ),
         )
         self.header.grid(row=0, column=0, sticky="ew", padx=6, pady=(4, 12))
@@ -148,7 +157,9 @@ class WelcomeStep(WizardStep):
             wraplength=620,
         )
         self.note.pack(fill="x")
-        bind_auto_wrap(self.content_frame, self.note, horizontal_padding=12, min_wrap=220)
+        bind_auto_wrap(
+            self.content_frame, self.note, horizontal_padding=12, min_wrap=220
+        )
         self.btn_next.configure(text=self.i18n.t("wizard.start"))
 
     def apply_language(self):
@@ -189,7 +200,9 @@ class VKAuthStep(WizardStep):
             wraplength=620,
         )
         self.lbl_status.pack(fill="x", padx=16, pady=(0, 16))
-        bind_auto_wrap(self.status_card, self.lbl_status, horizontal_padding=32, min_wrap=220)
+        bind_auto_wrap(
+            self.status_card, self.lbl_status, horizontal_padding=32, min_wrap=220
+        )
 
         self.btn_login = ctk.CTkButton(
             self.content_frame,
@@ -305,7 +318,9 @@ class TelegramStep(WizardStep):
             wraplength=620,
         )
         self.lbl_mode_state.pack(fill="x", padx=16, pady=(0, 16))
-        bind_auto_wrap(self.mode_card, self.lbl_mode_state, horizontal_padding=32, min_wrap=220)
+        bind_auto_wrap(
+            self.mode_card, self.lbl_mode_state, horizontal_padding=32, min_wrap=220
+        )
 
         self.credentials_card = Surface(self.step_scroll, self.theme, variant="surface")
         self.credentials_card.pack(fill="x", pady=(0, 12))
@@ -344,7 +359,9 @@ class TelegramStep(WizardStep):
             wraplength=620,
         )
         self.lbl_tip.pack(fill="x", padx=16, pady=(0, 14))
-        bind_auto_wrap(self.credentials_card, self.lbl_tip, horizontal_padding=32, min_wrap=220)
+        bind_auto_wrap(
+            self.credentials_card, self.lbl_tip, horizontal_padding=32, min_wrap=220
+        )
 
         btn_row = ctk.CTkFrame(self.credentials_card, fg_color="transparent")
         btn_row.pack(fill="x", padx=16, pady=(0, 16))
@@ -756,7 +773,9 @@ class StorageStep(WizardStep):
             wraplength=600,
         )
         self.lbl_storage_hint.pack(fill="x", padx=16, pady=(0, 16))
-        bind_auto_wrap(self.path_card, self.lbl_storage_hint, horizontal_padding=32, min_wrap=220)
+        bind_auto_wrap(
+            self.path_card, self.lbl_storage_hint, horizontal_padding=32, min_wrap=220
+        )
 
         self.btn_browse = ctk.CTkButton(
             self.content_frame,

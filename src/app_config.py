@@ -86,7 +86,9 @@ LEGACY_SETTINGS_PATH = str(LEGACY_SETTINGS_PATH_PATH)
 FFMPEG_PATH = ""
 for candidate in (
     BIN_DIR_PATH / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
-    _RESOURCE_DIR_PATH / "bin" / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
+    _RESOURCE_DIR_PATH
+    / "bin"
+    / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"),
 ):
     if candidate.is_file():
         FFMPEG_PATH = str(candidate)
@@ -98,12 +100,16 @@ VK_GENRES = {
 }
 
 _JS = _APP_CONFIG.get("js", {})
-JS_FIND_USER_ID = str(_JS.get("find_user_id", "return window.vk ? window.vk.id : null;"))
+JS_FIND_USER_ID = str(
+    _JS.get("find_user_id", "return window.vk ? window.vk.id : null;")
+)
 JS_SCROLL_HEIGHT = str(_JS.get("scroll_height", "return document.body.scrollHeight"))
 JS_SCROLL_TO_BOTTOM = str(
     _JS.get("scroll_to_bottom", "window.scrollTo(0, document.body.scrollHeight);")
 )
 JS_PARSE_TRACKS = str(_JS.get("parse_tracks", ""))
 JS_UNKASK_URL = str(_JS.get("unkask_url", ""))
-JS_EXPAND_BUTTON = str(_JS.get("expand_button", "arguments[0].scrollIntoView({block: 'center'});"))
+JS_EXPAND_BUTTON = str(
+    _JS.get("expand_button", "arguments[0].scrollIntoView({block: 'center'});")
+)
 JS_CLICK = str(_JS.get("click", "arguments[0].click();"))
