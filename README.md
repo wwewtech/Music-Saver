@@ -1,8 +1,10 @@
-# Music Saver
-
 <div align="center">
 
-### 🎵 Desktop-приложение для переноса музыки из VK и Яндекса в локальную библиотеку
+<img src="resources/MusicSaver.icon.preview.png" alt="Music Saver logo" width="132" />
+
+# Music Saver
+
+### 🎵 Перенос музыки из VK и Яндекса в твою локальную медиатеку
 
 Локальный инструмент на Python с интерфейсом на CustomTkinter, автоматическим теггингом, историей загрузок и фокусом на независимую офлайн-медиатеку.
 
